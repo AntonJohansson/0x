@@ -8,7 +8,7 @@
 #if __has_include(<sys/epoll.h>)
 	#define __HAS_EPOLL__ 1
 	#include <sys/epoll.h>
-#elif
+#elif __has_include(<sys/event.h>)
 	#include <sys/event.h> // for kqueue
 #endif
 
@@ -138,7 +138,7 @@ public:
 					remove(event.ident);
 					apply_changes();
 				}else if(event.flags & EV_ERROR){
-					printf("Error occured in PollSet, not handled!\n";
+					printf("Error occured in PollSet, not handled!\n");
 				}else if(event.flags & EVFILT_READ){
 					//console->info("rad");
 					//print_event_flags(event);

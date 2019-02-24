@@ -21,7 +21,7 @@ void recieve_data(int s){
 void on_disconnect(int s){
 	Socket socket(s, "0.0.0.0");
 
-	printf("Connection to %i : %s closed!\n", socket.handle, socket.ip_address);
+	printf("Connection to %i : %s closed!\n", socket.handle, socket.ip_address.c_str());
 	socket.close();
 }
 
