@@ -60,7 +60,7 @@ struct HexagonalMap{
 	}
 };
 
-// Ridiculous amount of string copies!
+// TODO: Ridiculous amount of string copies!
 static std::string serialize_map(HexagonalMap& map){
 	std::string result;
 	
