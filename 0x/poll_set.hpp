@@ -66,7 +66,7 @@ public:
 
 	void on_disconnect(int fd, Func f){
 		_disconnect_map[fd] = f;
-		printf("size: %i\n", _disconnect_map.size());
+		//printf("size: %i\n", _disconnect_map.size());
 	}
 
 	void remove(int fd){

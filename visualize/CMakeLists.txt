@@ -1,5 +1,6 @@
 set(PROJECT visualize)
 set(SOURCES
+	hex.cpp
 	main.cpp
 	)
 
@@ -13,11 +14,12 @@ target_compile_options(${PROJECT} PRIVATE
 	-std=c++1z -g
 	)
 
-#include_directories(${SFML_INCLUDE_DIR})
-#target_link_libraries(${PROJECT}
-#	sfml-graphics sfml-window sfml-system
-#	)
-
+# unix
 include_directories(${SFML_INCLUDE_DIR})
-target_link_libraries(${PROJECT} ${SFML_LIBRARIES})
+target_link_libraries(${PROJECT}
+	sfml-graphics sfml-window sfml-system
+	)
+# mac
+#include_directories(${SFML_INCLUDE_DIR})
+#target_link_libraries(${PROJECT} ${SFML_LIBRARIES})
 

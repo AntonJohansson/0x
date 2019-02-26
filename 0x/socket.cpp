@@ -18,7 +18,7 @@ Socket::~Socket(){
 }
 
 void Socket::close(){
-	printf("Closing socket %i\n", handle);
+	//printf("Closing socket %i\n", handle);
 	::close(handle);
 	handle = INVALID;
 }
@@ -38,7 +38,7 @@ void Socket::set_nonblocking(){
 void Socket::send(const std::string& data){
 	if(::send(handle, data.c_str(), data.size(), 0) == 1){
 		if(errno == EAGAIN || errno == EWOULDBLOCK){
-			printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
+			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
 			return;
 		}else if(errno == ECONNRESET){
 			// Connection closed by client
@@ -60,7 +60,7 @@ void Socket::send_all(const std::string& data){
 
 		if(nbytes == -1){
 			if(errno == EAGAIN || errno == EWOULDBLOCK){
-				printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
+				//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
 				return;
 			}else if(errno == ECONNRESET){
 				// Connection closed by client
@@ -89,7 +89,7 @@ std::string Socket::recv(){
 			printf("Recv error for %i\n", handle);
 			return {};
 		}else if(errno == EAGAIN || errno == EWOULDBLOCK){
-			printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
+			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
 			return {};
 		}else{
 			printf("Send failed %s, %i\n", std::strerror(errno), errno);
