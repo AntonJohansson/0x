@@ -22,6 +22,36 @@ struct Connection{
 HashMap<int, Connection> connections;
 
 
+#include "binary_encoding.hpp"
+#include <iostream>
+void test_binary_decoding(){
+	uint8_t  u8  = 255u;
+	uint16_t u16 = 65535u;
+	uint32_t u32 = 4294967295u;
+	uint64_t u64 = 18446744073709551615u;
+
+	std::cout 
+		<< "Testing binary encoding/decoding:\n"
+		<< "\t" << (int)u8 << "\n"
+		<< "\t" << u16 << "\n"
+		<< "\t" << u32 << "\n"
+		<< "\t" << u64 << "\n";
+
+	BinaryData data;
+	encode::uint(data, u8);  // 1 byte
+	encode::uint(data, u16); // 2 bytes
+	encode::uint(data, u32); // 4 bytes
+	encode::uint(data, u64); // 8 bytes
+
+	std::cout << "\n\tEncoded data:\n\t\t" << data.data() << "\n\t\tsize: " << data.size() << "\n";
+
+	std::cout << "\n\tDecoded data:"
+		<< "\n\t\t" << decode::uint<uint8_t>(data)
+		<< "\n\t\t" << decode::uint<uint16_t>(data)
+		<< "\n\t\t" << decode::uint<uint32_t>(data)
+		<< "\n\t\t" << decode::uint<uint64_t>(data) << "\n";
+}
+
 
 
 
@@ -140,6 +170,9 @@ void input_loop(PollSet& set){
 
 
 int main(){
+	test_binary_decoding();
+	return 0;
+
 	PollSet set;
 
 	auto server = server_bind("1111");

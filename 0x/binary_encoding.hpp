@@ -9,8 +9,6 @@ inline void append(BinaryData& data, uint8_t i){
 	data.push_back(i);
 }
 
-inline void insert(size_t pos, )
-
 namespace encode{
 
 // I don't remeber how this works anymore :/
@@ -21,10 +19,10 @@ void uint(BinaryData& data, UnsignedInt t){
 	}
 }
 
-template<typename T> inline void u8 (BinaryData& data, T t){uint(data, static_cast<uint8_t> (t););}
-template<typename T> inline void u16(BinaryData& data, T t){uint(data, static_cast<uint16_t>(t););}
-template<typename T> inline void u32(BinaryData& data, T t){uint(data, static_cast<uint32_t>(t););}
-template<typename T> inline void u64(BinaryData& data, T t){uint(data, static_cast<uint64_t>(t););}
+template<typename T> inline void u8 (BinaryData& data, T t){uint(data, static_cast<uint8_t> (t));}
+template<typename T> inline void u16(BinaryData& data, T t){uint(data, static_cast<uint16_t>(t));}
+template<typename T> inline void u32(BinaryData& data, T t){uint(data, static_cast<uint32_t>(t));}
+template<typename T> inline void u64(BinaryData& data, T t){uint(data, static_cast<uint64_t>(t));}
 
 template<typename T> inline void i8 (BinaryData& data, T t){uint(data, static_cast<int8_t> (t));}
 template<typename T> inline void i16(BinaryData& data, T t){uint(data, static_cast<int16_t>(t));}
@@ -45,7 +43,17 @@ namespace decode{
 //		_data.erase(_data.begin(), _data.begin() + ti.size);
 //		return decoded_t;
 //}
-//
+
+template<typename T>
+T uint(BinaryData& data){
+	T decoded_t = 0;
+	for(uint8_t i = 0; i < sizeof(T); i++){
+		decoded_t |= static_cast<T>(data[i]) << (8*sizeof(T) - i*(i+1));
+	}
+	data.erase(data.begin(), data.begin() + sizeof(T));
+	return decoded_t;
+}
+
 //template<typename SignedInt, typename UnsignedInt>
 //SignedInt decode_signed_int(){
 //	auto unsigned_value = decode_uint<UnsignedInt>();
