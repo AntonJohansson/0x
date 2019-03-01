@@ -1,5 +1,5 @@
-#include "socket.hpp"
-#include "server_connection.hpp"
+#include "tcp/socket.hpp"
+#include "tcp/socket_connection.hpp"
 #include "poll_set.hpp"
 #include "hash_map.hpp"
 #include "game.hpp"
@@ -22,34 +22,53 @@ struct Connection{
 HashMap<int, Connection> connections;
 
 
-#include "binary_encoding.hpp"
+#include "network/binary_encoding.hpp"
 #include <iostream>
 void test_binary_decoding(){
 	uint8_t  u8  = 255u;
 	uint16_t u16 = 65535u;
 	uint32_t u32 = 4294967295u;
 	uint64_t u64 = 18446744073709551615u;
+	int8_t 	i8	 	= -127;
+	int16_t i16 	= -32767;
+	int32_t i32		= -2147483647;
+	int64_t i64 	= -9223372036854775807;
 
 	std::cout 
 		<< "Testing binary encoding/decoding:\n"
 		<< "\t" << (int)u8 << "\n"
 		<< "\t" << u16 << "\n"
 		<< "\t" << u32 << "\n"
-		<< "\t" << u64 << "\n";
+		<< "\t" << u64 << "\n"
+		<< "\t" << (int)i8 << "\n"
+		<< "\t" << i16 << "\n"
+		<< "\t" << i32 << "\n"
+		<< "\t" << i64 << "\n";
 
 	BinaryData data;
-	encode::uint(data, u8);  // 1 byte
-	encode::uint(data, u16); // 2 bytes
-	encode::uint(data, u32); // 4 bytes
-	encode::uint(data, u64); // 8 bytes
+	encode::multiple_integers(data, u8, u16, u32, u64, i8, i16, i32, i64);
+	//encode::integer(data, u8);  // 1 byte
+	//encode::integer(data, u16); // 2 bytes
+	//encode::integer(data, u32); // 4 bytes
+	//encode::integer(data, u64); // 8 bytes
+	//encode::integer(data, i8);  // 1 byte
+	//encode::integer(data, i16); // 2 bytes
+	//encode::integer(data, i32); // 4 bytes
+	//encode::integer(data, i64); // 8 bytes
 
 	std::cout << "\n\tEncoded data:\n\t\t" << data.data() << "\n\t\tsize: " << data.size() << "\n";
 
-	std::cout << "\n\tDecoded data:"
-		<< "\n\t\t" << decode::uint<uint8_t>(data)
-		<< "\n\t\t" << decode::uint<uint16_t>(data)
-		<< "\n\t\t" << decode::uint<uint32_t>(data)
-		<< "\n\t\t" << decode::uint<uint64_t>(data) << "\n";
+	decode::multiple_integers(data, u8, u16, u32, u64, i8, i16, i32, i64);
+	std::cout 
+		<< "\tDecoded binary data:\n"
+		<< "\t\t" << (int)u8 << "\n"
+		<< "\t\t" << u16 << "\n"
+		<< "\t\t" << u32 << "\n"
+		<< "\t\t" << u64 << "\n"
+		<< "\t\t" << (int)i8 << "\n"
+		<< "\t\t" << i16 << "\n"
+		<< "\t\t" << i32 << "\n"
+		<< "\t\t" << i64 << "\n";
 }
 
 
@@ -128,7 +147,7 @@ void recieve_data(int s){
 			int max_players;
 			if(to_number(players, max_players)){
 				std::string name_str{name};
-				connection.session_info = game::create_or_join_session(player_mode, name_str, max_players);
+				connection.session_info = game::create_or_join_session(s, player_mode, name_str, max_players);
 			}
 
 			//std::cout << "|" << mode << "|" << std::endl;
@@ -170,8 +189,8 @@ void input_loop(PollSet& set){
 
 
 int main(){
-	test_binary_decoding();
-	return 0;
+	//test_binary_decoding();
+	//return 0;
 
 	PollSet set;
 
@@ -192,6 +211,17 @@ int main(){
 				set.on_disconnect(new_socket.handle, on_disconnect);
 
 				connections.insert({new_socket.handle, Connection{{}, new_socket.handle}});
+
+
+				// test send binary data
+				//BinaryData data;
+				//uint8_t u8 = 255;
+				//int32_t i32 = 12345;
+				//encode::integer(data, u8);
+				//encode::integer(data, i32);
+				//std::string data_str(data.begin(), data.end());
+				//new_socket.send_all(data_str);
+				////new_socket.send_all("asdflökjasdf");
 			});
 
 	set.add(0, [](int){

@@ -60,18 +60,18 @@ struct HexagonalMap{
 	}
 };
 
-// TODO: Ridiculous amount of string copies!
-static std::string serialize_map(HexagonalMap& map){
-	std::string result;
-	
-	result += "[MAP_INFO]" + std::to_string(map.radius) + "," + std::to_string(map.players) + ";";
-	result += "[MAP_DATA]";
-	map.for_each([&result](int q, int r, HexCell& cell){
-				result += std::to_string(q) + "," + std::to_string(r) + "," + std::to_string(cell.player_id) + "," + std::to_string(cell.resources) + ";";
-			});
-
-	return result;
-}
+//// TODO: Ridiculous amount of string copies!
+//static std::string serialize_map(HexagonalMap& map){
+//	std::string result;
+//	
+//	result += "[MAP_INFO]" + std::to_string(map.radius) + "," + std::to_string(map.players) + ";";
+//	result += "[MAP_DATA]";
+//	map.for_each([&result](int q, int r, HexCell& cell){
+//				result += std::to_string(q) + "," + std::to_string(r) + "," + std::to_string(cell.player_id) + "," + std::to_string(cell.resources) + ";";
+//			});
+//
+//	return result;
+//}
 
 static std::array<HexCell,6> hex_neighbours(HexagonalMap& map, int q, int r){
 	// possible movement directions

@@ -5,6 +5,9 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
+
+#include "network/serialize_data.hpp"
 
 namespace game{
 
@@ -23,6 +26,7 @@ PlayerMode get_player_mode_from_str(const std::string_view& sv){
 
 struct Session{
 	std::string name{"default"};
+	std::vector<int> observer_handles = {};
 	int observers = 0;
 	int players = 0;
 	int max_players = 0;
@@ -46,13 +50,14 @@ void print_session(Session& session){
 	printf("%s:\n\tobservers: %i\n\tplayers %i/%i\n", session.name.c_str(), session.observers, session.players, session.max_players);
 }
 
-SessionInfo create_or_join_session(PlayerMode& mode, const std::string& name, int max_players){
+SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const std::string& name, int max_players){
 	//printf("Entering create_or_join\n");
 	if(auto session_found = active_sessions.at(name)){
 		auto& session = *session_found;
 		if(mode == PLAYER && session.players < session.max_players){
 			session.players++;
 		}else if(mode == OBSERVER){
+			session.observer_handles.push_back(socket_handle);
 			session.observers++;
 		}else{
 			// Session full
@@ -65,6 +70,7 @@ SessionInfo create_or_join_session(PlayerMode& mode, const std::string& name, in
 	}else if(max_players > 0){
 		auto& [key, session] = active_sessions.insert({name, {
 				name, 
+				{socket_handle},
 				(mode == OBSERVER) ? 1 : 0,
 				(mode == PLAYER) ? 1 : 0, 
 				max_players}
@@ -101,9 +107,20 @@ void disconnect_from_session(SessionInfo& info){
 
 void start_game(Session& session){
 	auto& [name, game] = active_games.insert({session.name, {}});
+	// TODO: warning new!!!!
 	game.map = new HexagonalMap(3, 20, session.players);
-	auto str = serialize_map(*game.map);
-	printf("%s\n", str.c_str());
+
+	if(session.observers > 0){
+		BinaryData data;
+		serialize_map(data, *game.map);
+
+		std::string data_str(data.begin(), data.end());
+
+		for(auto& s : session.observer_handles){
+			Socket socket(s, "0.0.0.0");
+			socket.send_all(data_str);
+		}
+	}
 }
 
 void poll_sessions(){

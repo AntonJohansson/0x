@@ -1,7 +1,7 @@
 set(PROJECT 0x)
 set(SOURCES
-	server_connection.cpp
-	socket.cpp
+	tcp/socket_connection.cpp
+	tcp/socket.cpp
 	hex.cpp
 	main.cpp
 	)
