@@ -1,5 +1,7 @@
 set(PROJECT visualize)
 set(SOURCES
+	tcp/socket.cpp
+	tcp/socket_connection.cpp
 	hex.cpp
 	main.cpp
 	)
@@ -17,7 +19,7 @@ target_compile_options(${PROJECT} PRIVATE
 # unix
 include_directories(${SFML_INCLUDE_DIR})
 target_link_libraries(${PROJECT}
-	sfml-graphics sfml-window sfml-system
+	sfml-graphics sfml-window sfml-system pthread
 	)
 # mac
 #include_directories(${SFML_INCLUDE_DIR})

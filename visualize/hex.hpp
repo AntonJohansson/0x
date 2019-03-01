@@ -16,16 +16,29 @@ struct HexCell{
 };
 
 struct HexagonalMap{
-	const int radius;
+	int radius;
 
-	const float hex_size    = 0;
-	const float hex_width   = 0;
-	const float hex_height  = 0;
+	const float hex_size    = 20.0f;
+	const float hex_width   = sqrt(3)*hex_size;
+	const float hex_height  = 2.0f*hex_size;
 
 	int players = 0;
 	HexCell* storage = nullptr;
 
-	HexagonalMap(int radius, float hex_size, int players);
+	HexagonalMap() : radius(3) {}
+	HexagonalMap(int radius, int players);
+	~HexagonalMap(){
+		if(storage == nullptr){ 
+			delete[] storage;
+			storage = nullptr;
+		}
+	}
+
+	inline void generate_storage(int r){
+		radius = r;
+		size_t size = (2*radius+1)*(2*radius+1);
+		storage = new HexCell[size];
+	}
 
 	inline size_t index(int q, int r){
 		return (r+radius) + (q+radius)*(2*radius+1);
@@ -33,7 +46,7 @@ struct HexagonalMap{
 
 	inline bool contains(int q, int r){
 		auto i = index(q,r);
-		printf("%i\n", i);
+		//printf("%i\n", i);
 		return (i < (2*radius+1)*(2*radius+1));//&& storage[i].player_id > 0);
 	}
 
@@ -54,11 +67,23 @@ struct HexagonalMap{
 		}
 	}
 
-	~HexagonalMap(){
-		delete[] storage;
-		storage = nullptr;
+	inline bool has_storage(){
+		return storage != nullptr;
 	}
 };
+
+// TODO: Ridiculous amount of string copies!
+static std::string serialize_map(HexagonalMap& map){
+	std::string result;
+	
+	result += "[MAP_INFO]" + std::to_string(map.radius) + "," + std::to_string(map.players) + ";";
+	result += "[MAP_DATA]";
+	map.for_each([&result](int q, int r, HexCell& cell){
+				result += std::to_string(q) + "," + std::to_string(r) + "," + std::to_string(cell.player_id) + "," + std::to_string(cell.resources) + ";";
+			});
+
+	return result;
+}
 
 static std::array<HexCell,6> hex_neighbours(HexagonalMap& map, int q, int r){
 	// possible movement directions

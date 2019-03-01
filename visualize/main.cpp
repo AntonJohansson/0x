@@ -6,11 +6,24 @@
 #include <SFML/Graphics.hpp>
 #include <array>
 #include <assert.h>
+#include <thread>
+#include <future>
+#include <chrono>
 
 #include "hex.hpp"
+#include "tcp/socket.hpp"
+#include "tcp/socket_connection.hpp"
+#include "io/poll_set.hpp"
+#include "network/binary_encoding.hpp"
 
 constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
+
+std::thread server_thread;
+
+bool connected_to_server = false;
+
+HexagonalMap map;
 
 std::array<sf::Vertex,8> vertices;
 void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Color color){
@@ -35,8 +48,74 @@ void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Co
 
 
 
+void input_loop(PollSet& set){
+	while(connected_to_server){
+		set.poll();
+	}
+}
 
+void receive_data(int s){
+	Socket socket(s, "0.0.0.0");
+	printf("received data!\n");
 
+	// Receive all data
+	std::string total_data;
+	std::string incoming_data;
+	while(true){
+		incoming_data = socket.recv();
+		if(incoming_data.empty()) break;
+
+		total_data += incoming_data;
+	}
+
+	BinaryData data(total_data.begin(), total_data.end());
+	printf("receive data of size %i\n", (int)data.size());
+
+	int radius, players;
+	decode::multiple_integers(data,radius, players);
+	printf("radius: %i, players: %i\n", radius, players);
+	map.generate_storage(radius);
+	map.players = players;
+
+	while(!data.empty()){
+		int q;
+		int r;
+		int player_id;
+		int resources;
+		decode::multiple_integers(data, q, r, player_id, resources);
+		printf("%i, %i, %i, %i\n", q, r, player_id, resources);
+		auto& h = map.at(q, r);
+		h.q = q;
+		h.r = r;
+		h.player_id = player_id;
+		h.resources = resources;
+	}
+}
+
+void reconnect(Socket& socket, PollSet& set){
+	while(!connected_to_server){ 
+		if(socket = client_bind("127.0.0.1", "1111"); socket.handle != Socket::INVALID){
+			socket.set_nonblocking();
+			socket.send_all("coj observer hej 1");
+			connected_to_server = true;
+			printf("Connected to server!\n");
+
+			set.add(socket.handle, receive_data);
+
+			// handle server disconnect
+			set.on_disconnect(socket.handle, [&](int){
+					connected_to_server = false;
+					printf("Server disconnected!\n");
+					});
+
+			input_loop(set);
+		}else{
+			printf("Reconnecting!\n");
+		}
+
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+}
 
 
 
@@ -99,6 +178,11 @@ int transfer_from_q;
 int transfer_from_r;
 
 int main(){
+	PollSet set;
+	//std::thread input_thread;
+	Socket socket;
+	server_thread = std::thread(reconnect, std::ref(socket), std::ref(set));
+
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
 	sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "0x", sf::Style::Close, settings);
@@ -115,9 +199,6 @@ int main(){
 	text.setFont(font);
 	text.setCharacterSize(12);
 	text.setFillColor(sf::Color(244,240,219));
-
-	HexagonalMap map(3, 20, 5);
-	//printf("size: %f\nwidth: %f\nheight: %f\n", map.hex_size, map.hex_width, map.hex_height);
 
 	while (window.isOpen()){
 		sf::Event event;
@@ -138,11 +219,11 @@ int main(){
 					transfer_from_q = mouse_q;
 					transfer_from_r = mouse_r;
 
-					if(map.contains(transfer_from_q, transfer_from_r)){
+					if(map.has_storage() && map.contains(transfer_from_q, transfer_from_r)){
 						map.at(transfer_from_q, transfer_from_r).selected = true;
 						selecting_transfer = true;
 					}
-				}else if(map.contains(mouse_q, mouse_r)){
+				}else if(map.has_storage() && map.contains(mouse_q, mouse_r)){
 					transfer_resource(map, transfer_from_q, transfer_from_r, mouse_q, mouse_r, transfer_amount);
 					map.at(transfer_from_q, transfer_from_r).selected = false;
 					selecting_transfer = false;
@@ -152,13 +233,16 @@ int main(){
 		}
 
 		mouse_pos = sf::Mouse::getPosition(window);
-		std::tie(mouse_q, mouse_r) = axial::closest_hex(map, mouse_pos.x, mouse_pos.y);
+		if(map.has_storage()){
+			std::tie(mouse_q, mouse_r) = axial::closest_hex(map, mouse_pos.x, mouse_pos.y);
+		}
 
 		window.clear(sf::Color(244,240,219));
 
-		// Using a capturing lambda here is slow (due to virtual function call?),
-		// especially since it's being called in a tight loop
-		map.for_each([&](int q, int r, HexCell& cell){
+		if(map.has_storage()){
+			// Using a capturing lambda here is slow (due to virtual function call?),
+			// especially since it's being called in a tight loop
+			map.for_each([&](int q, int r, HexCell& cell){
 					auto [x, y] = axial::to_screen(map, q, r);
 					x *= 1.05f;
 					y *= 1.05f;
@@ -167,17 +251,17 @@ int main(){
 					y = SCREEN_HEIGHT - y;
 
 					if(mouse_q == q && mouse_r == r){
-						draw_hexagon(window, map.hex_size, x, y, sf::Color(0,0,100));
+					draw_hexagon(window, map.hex_size, x, y, sf::Color(0,0,100));
 					}else if(cell.selected){
-						draw_hexagon(window, map.hex_size, x, y, sf::Color(100,0,0));
+					draw_hexagon(window, map.hex_size, x, y, sf::Color(100,0,0));
 					}else if(cell.player_id > 0){
-						auto color = sf::Color(
+					auto color = sf::Color(
 							0.5f*(cell.player_id+0)*255/map.players,
 							0.5f*(cell.player_id+1)*255/map.players,
 							0.5f*(cell.player_id+2)*255/map.players);
-						draw_hexagon(window, map.hex_size, x, y, color);
+					draw_hexagon(window, map.hex_size, x, y, color);
 					} else{
-						draw_hexagon(window, map.hex_size, x, y, sf::Color(47,47,47));
+					draw_hexagon(window, map.hex_size, x, y, sf::Color(47,47,47));
 					}
 
 					// Debug draw text
@@ -198,26 +282,29 @@ int main(){
 								text_rect.top  + text_rect.height/2.0f);
 						window.draw(text);
 					}
-				});
+			});
+		}
 
-		auto n = hex_neighbours(map, mouse_q, mouse_r);
-		for(auto hex : n){
-			//if(hex.player_id == 0)continue;
+		if(map.has_storage()){
+			auto n = hex_neighbours(map, mouse_q, mouse_r);
+			for(auto hex : n){
+				//if(hex.player_id == 0)continue;
 
-			auto [x, y] = axial::to_screen(map, hex.q, hex.r);
-			x *= 1.05f;
-			y *= 1.05f;
-			x += SCREEN_WIDTH/2.0f;
-			y += SCREEN_HEIGHT/2.0f;
-			y = SCREEN_HEIGHT - y;
+				auto [x, y] = axial::to_screen(map, hex.q, hex.r);
+				x *= 1.05f;
+				y *= 1.05f;
+				x += SCREEN_WIDTH/2.0f;
+				y += SCREEN_HEIGHT/2.0f;
+				y = SCREEN_HEIGHT - y;
 
-			draw_hexagon(window, map.hex_size, x, y, sf::Color(0,100,0));
+				draw_hexagon(window, map.hex_size, x, y, sf::Color(0,100,0));
+			}
 		}
 
 		window.display();
 	}
 
-	
+
 
 
 	window.close();

@@ -1,10 +1,7 @@
 #include "hex.hpp"
 
-HexagonalMap::HexagonalMap(int radius, float hex_size, int players)
+HexagonalMap::HexagonalMap(int radius, int players)
 	: radius(radius),
-		hex_size(hex_size),
-		hex_width(sqrt(3)*hex_size),
-		hex_height(2*hex_size),
 		players(players){
 	size_t size = (2*radius+1)*(2*radius+1);
 	storage = new HexCell[size];
