@@ -9,6 +9,7 @@
 #include <thread>
 #include <future>
 #include <chrono>
+#include <vector>
 
 #include "hex.hpp"
 #include "tcp/socket.hpp"
@@ -20,6 +21,9 @@ constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
 
 std::thread server_thread;
+
+std::vector<std::string> sessions;
+sf::Text sessions_text;
 
 bool connected_to_server = false;
 
@@ -71,24 +75,38 @@ void receive_data(int s){
 	BinaryData data(total_data.begin(), total_data.end());
 	printf("receive data of size %i\n", (int)data.size());
 
-	int radius, players;
-	decode::multiple_integers(data,radius, players);
-	printf("radius: %i, players: %i\n", radius, players);
-	map.generate_storage(radius);
-	map.players = players;
+	uint8_t packet_type = 0;
+	decode::integer(data, packet_type);
 
-	while(!data.empty()){
-		int q;
-		int r;
-		int player_id;
-		int resources;
-		decode::multiple_integers(data, q, r, player_id, resources);
-		printf("%i, %i, %i, %i\n", q, r, player_id, resources);
-		auto& h = map.at(q, r);
-		h.q = q;
-		h.r = r;
-		h.player_id = player_id;
-		h.resources = resources;
+	if(packet_type == 1){ // LIST
+		std::string session_name, text_string;
+		sessions.clear();
+		while(!data.empty()){
+			session_name = decode::string(data);
+			sessions.push_back(session_name);
+			text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
+		}
+		sessions_text.setString(text_string);
+	}else if(packet_type == 2){ // MAP
+		int radius, players;
+		decode::multiple_integers(data,radius, players);
+		printf("radius: %i, players: %i\n", radius, players);
+		map.generate_storage(radius);
+		map.players = players;
+
+		while(!data.empty()){
+			int q;
+			int r;
+			int player_id;
+			int resources;
+			decode::multiple_integers(data, q, r, player_id, resources);
+			printf("%i, %i, %i, %i\n", q, r, player_id, resources);
+			auto& h = map.at(q, r);
+			h.q = q;
+			h.r = r;
+			h.player_id = player_id;
+			h.resources = resources;
+		}
 	}
 }
 
@@ -96,7 +114,7 @@ void reconnect(Socket& socket, PollSet& set){
 	while(!connected_to_server){ 
 		if(socket = client_bind("127.0.0.1", "1111"); socket.handle != Socket::INVALID){
 			socket.set_nonblocking();
-			socket.send_all("coj observer hej 1");
+			//socket.send_all("coj observer hej 1");
 			connected_to_server = true;
 			printf("Connected to server!\n");
 
@@ -200,6 +218,11 @@ int main(){
 	text.setCharacterSize(12);
 	text.setFillColor(sf::Color(244,240,219));
 
+	sessions_text.setFont(font);
+	sessions_text.setCharacterSize(30);
+	sessions_text.setFillColor(sf::Color::Black);
+	sessions_text.setPosition({50, 50});
+
 	while (window.isOpen()){
 		sf::Event event;
 		while(window.pollEvent(event)){
@@ -213,6 +236,14 @@ int main(){
 					case sf::Keyboard::A:
 						toggle_hex_positions = !toggle_hex_positions;
 						break;
+					case sf::Keyboard::R:
+						socket.send_all("ls");
+						break;
+					case sf::Keyboard::Num1: if(sessions.size() > 0){socket.send_all("coj o " + sessions[0] + " 1");} break;
+					case sf::Keyboard::Num2: if(sessions.size() > 1){socket.send_all("coj o " + sessions[1] + " 1");} break;
+					case sf::Keyboard::Num3: if(sessions.size() > 2){socket.send_all("coj o " + sessions[2] + " 1");} break;
+					case sf::Keyboard::Num4: if(sessions.size() > 3){socket.send_all("coj o " + sessions[3] + " 1");} break;
+					case sf::Keyboard::Num5: if(sessions.size() > 4){socket.send_all("coj o " + sessions[4] + " 1");} break;
 				}
 			}else if(event.type == sf::Event::MouseButtonPressed){
 				if(!selecting_transfer){
@@ -251,11 +282,11 @@ int main(){
 					y = SCREEN_HEIGHT - y;
 
 					if(mouse_q == q && mouse_r == r){
-					draw_hexagon(window, map.hex_size, x, y, sf::Color(0,0,100));
+						draw_hexagon(window, map.hex_size, x, y, sf::Color(0,0,100));
 					}else if(cell.selected){
-					draw_hexagon(window, map.hex_size, x, y, sf::Color(100,0,0));
+						draw_hexagon(window, map.hex_size, x, y, sf::Color(100,0,0));
 					}else if(cell.player_id > 0){
-					auto color = sf::Color(
+						auto color = sf::Color(
 							0.5f*(cell.player_id+0)*255/map.players,
 							0.5f*(cell.player_id+1)*255/map.players,
 							0.5f*(cell.player_id+2)*255/map.players);
@@ -300,6 +331,8 @@ int main(){
 				draw_hexagon(window, map.hex_size, x, y, sf::Color(0,100,0));
 			}
 		}
+
+		window.draw(sessions_text);
 
 		window.display();
 	}

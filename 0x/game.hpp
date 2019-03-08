@@ -133,6 +133,7 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 		auto& game = *game_found;
 
 		BinaryData data;
+		encode::u8(data, 2);
 		serialize_map(data, *game.map);
 
 		for(auto& s : observers){

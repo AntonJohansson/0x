@@ -110,7 +110,7 @@ inline std::string string(BinaryData& data){
 	auto sub = subdata(data, 0, size);
 	data.erase(data.begin(), data.begin() + size);
 
-	return std::string(data.begin(), data.end());
+	return std::string(sub.begin(), sub.end());
 }
 
 //template<typename SignedInt, typename UnsignedInt>

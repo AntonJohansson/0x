@@ -143,15 +143,18 @@ void receive_client_data(int s){
 				connection.session_info = game::create_or_join_session(s, player_mode, name_str, max_players);
 			}
 		}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
-			BinaryData data;
-			game::active_sessions.for_each([&](auto& pair){
+			if(game::active_sessions.size()){
+				BinaryData data;
+
+				encode::u8(data, 1);
+
+				game::active_sessions.for_each([&](auto& pair){
 						auto& session = pair.value;
 						encode::string(data, session.name);
-					});
+						});
 
-			std::cout << "size: " << data.size() << std::endl;
-
-			tcp_socket::send_all(s, &data[0], data.size());
+				tcp_socket::send_all(s, &data[0], data.size());
+			}
 		}
 	}
 
