@@ -20,6 +20,7 @@
  /home/aj/git/0x/0x/io/poll_set.hpp
  /home/aj/git/0x/0x/network/binary_encoding.hpp
  /home/aj/git/0x/0x/network/serialize_data.hpp
+ /home/aj/git/0x/0x/number_types.hpp
  /home/aj/git/0x/0x/server.cpp
  /home/aj/git/0x/0x/server.hpp
  /home/aj/git/0x/0x/string_helper.hpp

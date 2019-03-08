@@ -19,6 +19,7 @@
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/io/poll_set.hpp
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/network/binary_encoding.hpp
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/network/serialize_data.hpp
+0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/number_types.hpp
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/server.cpp
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/server.hpp
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/string_helper.hpp

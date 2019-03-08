@@ -2,6 +2,7 @@
 
 #include "hash_map.hpp"
 #include "hex.hpp"
+#include "tcp/socket.hpp"
 
 #include <string>
 #include <string_view>
@@ -17,7 +18,7 @@ enum PlayerMode{
 	PLAYER
 };
 
-PlayerMode get_player_mode_from_str(const std::string_view& sv){
+static PlayerMode get_player_mode_from_str(const std::string_view& sv){
 	if(sv.compare("observer") == 0 || sv.compare("o") == 0){ return OBSERVER; }
 	if(sv.compare("player") == 0   || sv.compare("p") == 0){ return PLAYER; }
 
@@ -46,11 +47,11 @@ struct Game{
 static HashMap<std::string, Session> active_sessions;
 static HashMap<std::string, Game> active_games;
 
-void print_session(Session& session){
+static void print_session(Session& session){
 	printf("%s:\n\tobservers: %i\n\tplayers %i/%i\n", session.name.c_str(), session.observers, session.players, session.max_players);
 }
 
-SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const std::string& name, int max_players){
+static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const std::string& name, int max_players){
 	//printf("Entering create_or_join\n");
 	if(auto session_found = active_sessions.at(name)){
 		auto& session = *session_found;
@@ -85,7 +86,7 @@ SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const st
 	return {};
 }
 
-void disconnect_from_session(SessionInfo& info){
+static void disconnect_from_session(SessionInfo& info){
 	if(auto session_found = active_sessions.at(info.name)){
 		auto& session = *session_found;
 		switch(info.mode){
@@ -105,7 +106,7 @@ void disconnect_from_session(SessionInfo& info){
 	}
 }
 
-void start_game(Session& session){
+static void start_game(Session& session){
 	auto& [name, game] = active_games.insert({session.name, {}});
 	// TODO: warning new!!!!
 	game.map = new HexagonalMap(3, 20, session.players);
@@ -123,7 +124,7 @@ void start_game(Session& session){
 	}
 }
 
-void poll_sessions(){
+static void poll_sessions(){
 	active_sessions.for_each([](auto& pair){
 			auto& session = pair.value;
 			// start game if session is full
@@ -137,8 +138,5 @@ void poll_sessions(){
 
 struct PlayerData{
 };
-
-inline void do_turn(){
-}
 
 }
