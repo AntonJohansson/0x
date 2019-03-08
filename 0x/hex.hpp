@@ -12,7 +12,7 @@
 struct HexCell{
 	int q = 0, r = 0;
 	int resources = 0;
-	int player_id = 0;
+	int player_id = -1;
 	bool selected = false;
 };
 

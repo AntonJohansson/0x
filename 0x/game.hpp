@@ -29,6 +29,7 @@ static PlayerMode get_player_mode_from_str(const std::string_view& sv){
 struct Session{
 	std::string name{"default"};
 	std::vector<int> observer_handles = {};
+	std::vector<int> player_handles = {};
 	int observers = 0;
 	int players = 0;
 	int max_players = 0;
@@ -42,6 +43,9 @@ struct SessionInfo{
 };
 
 struct Game{
+	bool waiting_on_turn = false;
+	int current_player_turn = 0;
+	Session* session = nullptr;
 	HexagonalMap* map = nullptr;
 };
 
@@ -74,6 +78,7 @@ static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, c
 	if(auto session_found = active_sessions.at(name)){
 		auto& session = *session_found;
 		if(mode == PLAYER && session.players < session.max_players){
+			session.player_handles.push_back(socket_handle);
 			session.players++;
 		}else if(mode == OBSERVER){
 			session.observer_handles.push_back(socket_handle);
@@ -91,13 +96,25 @@ static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, c
 		print_session(session);
 		return {true, name, mode};
 	}else if(max_players > 0){
-		auto& [key, session] = active_sessions.insert({name, {
-				name, 
-				{socket_handle},
-				(mode == OBSERVER) ? 1 : 0,
-				(mode == PLAYER) ? 1 : 0, 
-				max_players}
-				});
+		auto& [key, session] = active_sessions.emplace(name);
+		session.name = name;
+		session.max_players = max_players;
+
+		if(mode == OBSERVER){
+			session.observer_handles.push_back(socket_handle);
+			session.observers++;
+		}else if(mode == PLAYER){
+			session.player_handles.push_back(socket_handle);
+			session.players++;
+		}
+		//auto& [key, session] = active_sessions.insert({name, {
+		//		name, 
+		//		(mode == OBSERVER) ? ({socket_handle}) : ({}),
+		//		(mode == PLAYER) ? ({socket_handle}) : ({}),
+		//		(mode == OBSERVER) ? 1 : 0,
+		//		(mode == PLAYER) ? 1 : 0, 
+		//		max_players}
+		//		});
 		printf("Creating session\n");
 		print_session(session);
 		return {true, name, mode};
@@ -146,9 +163,51 @@ static void start_game(Session& session){
 	auto& [name, game] = active_games.insert({session.name, {}});
 	// TODO: warning new!!!!
 	game.map = new HexagonalMap(3, 20, session.players);
+	game.session = &session;
 
 	if(session.observers > 0){
 		send_observer_data(session.observer_handles, session);
+	}
+}
+
+static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1){
+	auto& cell0 = game.map->at(q0, r0);
+	auto& cell1 = game.map->at(q1, r1);
+
+	cell0.resources -= amount;
+
+	if(cell1.player_id != cell0.player_id){
+		if(cell1.resources < amount){
+			cell1.resources = amount - cell1.resources;
+			cell1.player_id = cell0.player_id;
+		}
+	}else{
+		cell1.resources += amount;
+	}
+
+	game.waiting_on_turn = false;
+}
+
+static void do_turn(Session& session, Game& game){
+	if(!game.waiting_on_turn){
+		send_observer_data(session.observer_handles, session);
+
+		BinaryData data;
+		int count = 0;
+		game.map->for_each([&](int q, int r, HexCell& cell){
+					if(cell.player_id == game.current_player_turn){
+						encode::multiple_integers(data, q, r, 1, cell.resources);
+						for(auto& n : hex_neighbours(*game.map, q, r)){
+							encode::multiple_integers(data, n.q, n.r, static_cast<int>(n.player_id == cell.player_id), n.resources);
+						}
+					}
+				});
+
+		std::cout << data.size() << std::endl;
+
+		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
+		game.waiting_on_turn = true;
+		game.current_player_turn = game.current_player_turn % session.max_players;
 	}
 }
 
@@ -162,6 +221,13 @@ static void poll_sessions(){
 				start_game(session);
 			}
 		});
+
+	active_games.for_each([](auto& pair){
+				auto& game = pair.value;
+				auto& session = *game.session;
+
+				do_turn(session, game);
+			});
 }
 
 struct PlayerData{

@@ -121,6 +121,7 @@ void receive_client_data(int s){
 	//	total_data += incoming_data;
 	//}
 
+	printf("%lu bytes received\n", bytes_received);
 	if(auto connection_opt = connections.at(s)){
 		auto& connection = *connection_opt;
 
@@ -154,6 +155,24 @@ void receive_client_data(int s){
 						});
 
 				tcp_socket::send_all(s, &data[0], data.size());
+			}
+		}else{
+			uint8_t packet_id = 0;
+			BinaryData data(buffer, buffer + bytes_received);
+			decode::integer(data, packet_id);
+
+			printf("packet id: %i\n", static_cast<int>(packet_id));
+
+			if(packet_id == 3){
+				int res, q0, r0, q1, r1;
+				decode::multiple_integers(data, res, q0, r0, q1, r1);
+				printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
+
+				if(auto game_found = game::active_games.at(connection.session_info.name)){
+					auto& game = *game_found;
+
+					game::complete_turn(game, res, q0, r0, q1, r1);
+				}
 			}
 		}
 	}

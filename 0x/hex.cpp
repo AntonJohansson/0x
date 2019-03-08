@@ -12,11 +12,11 @@ HexagonalMap::HexagonalMap(int radius, float hex_size, int players)
 	// might not be necessary
 	for_each([&](int q, int r, HexCell& cell){
 				//printf("%i\n", index(q,r));
-				cell = {q,r,0,0, false};
+				cell = {q,r,0,-1, false};
 			});
 
 	float angle = 2.0f*M_PI/static_cast<float>(players);
-	for(int i = 1; i <= players; i++){
+	for(int i = 0; i < players; i++){
 		auto [q, r] = axial::closest_hex(*this, 400.0f+hex_size*radius*cos(angle*i), 300.0f+hex_size*radius*sin(angle*i));
 		//printf("%i, %i\n", q, r);
 		auto& hex = at(q, r);
