@@ -13,6 +13,26 @@
 
 using BinaryData = std::vector<uint8_t>;
 
+constexpr size_t npos = static_cast<size_t>(-1);
+inline BinaryData subdata(BinaryData& data, size_t b, size_t e = npos){
+	auto begin = data.begin() + b;
+	auto end   = (e != npos) ? data.begin() + e : data.end();
+
+	return BinaryData(begin, end);
+}
+
+template<typename Iteratable,
+		typename = std::enable_if_t<!std::is_convertible<Iteratable, uint8_t>::value>>
+inline void insert(BinaryData& data, size_t pos, const Iteratable& t){
+		data.insert(data.begin() + pos, std::begin(t), std::end(t));
+}
+
+template<typename Iteratable,
+		typename = std::enable_if_t<!std::is_convertible<Iteratable, uint8_t>::value>>
+inline void append(BinaryData& data, const Iteratable& t){
+		insert(data, data.size(), t);
+}
+
 inline void append(BinaryData& data, uint8_t i){
 	data.push_back(i);
 }
@@ -21,26 +41,37 @@ namespace encode{
 
 // I don't remeber how this works anymore :/
 template<typename T>
-void integer(BinaryData& data, T t){
+inline void integer(BinaryData& data, T t){
 	for(int8_t s = 8*sizeof(T) - 8; s >= 0; s -= 8){
 		append(data, static_cast<uint8_t>(t >> s));
 	}
 }
 
 template<typename... Args>
-void multiple_integers(BinaryData& data, Args... args){
+inline void multiple_integers(BinaryData& data, Args... args){
 	(integer<Args>(data, args), ...);
 }
 
-template<typename T> inline void u8 (BinaryData& data, T t){uint(data, static_cast<uint8_t> (t));}
-template<typename T> inline void u16(BinaryData& data, T t){uint(data, static_cast<uint16_t>(t));}
-template<typename T> inline void u32(BinaryData& data, T t){uint(data, static_cast<uint32_t>(t));}
-template<typename T> inline void u64(BinaryData& data, T t){uint(data, static_cast<uint64_t>(t));}
+#define ENC_INT_TYPE(name, type) \
+	template<typename T> inline void name (BinaryData& data, T t) {\
+		integer(data, static_cast< type >(t)); \
+	}
 
-template<typename T> inline void i8 (BinaryData& data, T t){uint(data, static_cast<int8_t> (t));}
-template<typename T> inline void i16(BinaryData& data, T t){uint(data, static_cast<int16_t>(t));}
-template<typename T> inline void i32(BinaryData& data, T t){uint(data, static_cast<int32_t>(t));}
-template<typename T> inline void i64(BinaryData& data, T t){uint(data, static_cast<int64_t>(t));}
+ENC_INT_TYPE(u8,  uint8_t)
+ENC_INT_TYPE(u16, uint16_t)
+ENC_INT_TYPE(u32, uint32_t)
+ENC_INT_TYPE(u64, uint64_t)
+ENC_INT_TYPE(i8,  int8_t)
+ENC_INT_TYPE(i16, int16_t)
+ENC_INT_TYPE(i32, int32_t)
+ENC_INT_TYPE(i64, int64_t)
+
+
+inline void string(BinaryData& data, const std::string& str){
+	// TODO this might not be optimal
+	u32(data, str.size());
+	append(data, str);
+}
 
 }
 
@@ -58,7 +89,7 @@ namespace decode{
 //}
 
 template<typename T>
-void integer(BinaryData& data, T& t){
+inline void integer(BinaryData& data, T& t){
 	T decoded_t = 0;
 	for(uint8_t i = 0; i < sizeof(T); i++){
 		decoded_t |= static_cast<T>(data[i]) << (8*sizeof(T) - 8*(i+1));
@@ -68,8 +99,18 @@ void integer(BinaryData& data, T& t){
 }
 
 template<typename... Args>
-void multiple_integers(BinaryData& data, Args&... args){
+inline void multiple_integers(BinaryData& data, Args&... args){
 	(integer<Args>(data, std::forward<Args&>(args)), ...);
+}
+
+inline std::string string(BinaryData& data){
+	uint32_t size;
+	integer(data, size);
+
+	auto sub = subdata(data, 0, size);
+	data.erase(data.begin(), data.begin() + size);
+
+	return std::string(data.begin(), data.end());
 }
 
 //template<typename SignedInt, typename UnsignedInt>

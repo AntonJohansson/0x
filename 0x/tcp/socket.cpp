@@ -14,21 +14,21 @@
 //#include <sys/wait.h>
 #include <fcntl.h>
 
-namespace socket{
+namespace tcp_socket{
 
 void set_blocking(Socket& s){
 	// Clear O_NONBLOCK flag
-	int opts = fcntl(handle, F_GETFL);
+	int opts = fcntl(s, F_GETFL);
 	opts = opts & (~O_NONBLOCK);
-	fcntl(handle, F_SETFL, opts);
+	fcntl(s, F_SETFL, opts);
 }
 
 void set_nonblocking(Socket& s){
 	// Set O_NONBLOCK flag
-	fcntl(handle, F_SETFL, O_NONBLOCK);
+	fcntl(s, F_SETFL, O_NONBLOCK);
 }
 
-void send(Socket& s, unsigned char* data, size_t size){
+void send(Socket& s, const unsigned char* data, size_t size){
 	if(::send(s, data, size, 0) == 1){
 		if(errno == EAGAIN || errno == EWOULDBLOCK){
 			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
@@ -44,7 +44,7 @@ void send(Socket& s, unsigned char* data, size_t size){
 	}
 }
 
-void send_all(Socket& s, unsigned char* data, size_t size){
+void send_all(Socket& s, const unsigned char* data, size_t size){
 	size_t total  = 0;
 	size_t nbytes = 0;
 
@@ -70,15 +70,33 @@ void send_all(Socket& s, unsigned char* data, size_t size){
 }
 
 void send(Socket& s, const std::string& data){
-	send(s, data.data(), data.size());
+	send(s, reinterpret_cast<const unsigned char*>(data.data()), data.size());
 }
 
 void send_all(Socket& s, const std::string& data){
-	send_all(s, data.data(), data.size());
+	send_all(s, reinterpret_cast<const unsigned char*>(data.data()), data.size());
 }
 
+static constexpr int32_t MAXDATASIZE = 128;
 size_t recv(Socket& s, unsigned char* buffer, size_t buffer_size){
+	//static char buffer[MAXDATASIZE];
+	static int32_t nbytes = 0;
 
+	if(nbytes = ::recv(s, buffer, buffer_size-1, 0); nbytes <= 0){
+		if(errno == ECONNRESET || nbytes == 0){
+			// Connection closed
+			printf("Recv error for %i\n", s);
+			return 0;
+		}else if(errno == EAGAIN || errno == EWOULDBLOCK){
+			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
+			return 0;
+		}else{
+			printf("Send failed %s, %i\n", std::strerror(errno), errno);
+			return 0;
+		}
+	}
+
+	return nbytes;
 }
 
 void close(Socket& s){
@@ -120,26 +138,27 @@ void close(Socket& s){
 
 // returning string by value will require
 // copy of data!
-constexpr int32_t MAXDATASIZE = 128;
-std::string Socket::recv(){
-	static char buffer[MAXDATASIZE];
-	static int32_t nbytes = 0;
-
-	if(nbytes = ::recv(handle, buffer, MAXDATASIZE-1, 0); nbytes <= 0){
-		if(errno == ECONNRESET || nbytes == 0){
-			// Connection closed
-			printf("Recv error for %i\n", handle);
-			return {};
-		}else if(errno == EAGAIN || errno == EWOULDBLOCK){
-			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
-			return {};
-		}else{
-			printf("Send failed %s, %i\n", std::strerror(errno), errno);
-			return {};
-		}
-	}
-
-	return std::string(buffer, nbytes);
-}
+//constexpr int32_t MAXDATASIZE = 128;
+//std::string Socket::recv(){
+//	static char buffer[MAXDATASIZE];
+//constexpr int32_t MAXDATASIZE = 128;
+//	static int32_t nbytes = 0;
+//
+//	if(nbytes = ::recv(handle, buffer, MAXDATASIZE-1, 0); nbytes <= 0){
+//		if(errno == ECONNRESET || nbytes == 0){
+//			// Connection closed
+//			printf("Recv error for %i\n", handle);
+//			return {};
+//		}else if(errno == EAGAIN || errno == EWOULDBLOCK){
+//			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
+//			return {};
+//		}else{
+//			printf("Send failed %s, %i\n", std::strerror(errno), errno);
+//			return {};
+//		}
+//	}
+//
+//	return std::string(buffer, nbytes);
+//}
 
 

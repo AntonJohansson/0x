@@ -83,9 +83,22 @@ include 0x/CMakeFiles/0x.dir/flags.make
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/0x.dir/tcp/socket.cpp.s"
 	cd /home/aj/git/0x/build/0x && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aj/git/0x/0x/tcp/socket.cpp -o CMakeFiles/0x.dir/tcp/socket.cpp.s
 
+0x/CMakeFiles/0x.dir/game.cpp.o: 0x/CMakeFiles/0x.dir/flags.make
+0x/CMakeFiles/0x.dir/game.cpp.o: ../0x/game.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object 0x/CMakeFiles/0x.dir/game.cpp.o"
+	cd /home/aj/git/0x/build/0x && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/0x.dir/game.cpp.o -c /home/aj/git/0x/0x/game.cpp
+
+0x/CMakeFiles/0x.dir/game.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/0x.dir/game.cpp.i"
+	cd /home/aj/git/0x/build/0x && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aj/git/0x/0x/game.cpp > CMakeFiles/0x.dir/game.cpp.i
+
+0x/CMakeFiles/0x.dir/game.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/0x.dir/game.cpp.s"
+	cd /home/aj/git/0x/build/0x && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aj/git/0x/0x/game.cpp -o CMakeFiles/0x.dir/game.cpp.s
+
 0x/CMakeFiles/0x.dir/server.cpp.o: 0x/CMakeFiles/0x.dir/flags.make
 0x/CMakeFiles/0x.dir/server.cpp.o: ../0x/server.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object 0x/CMakeFiles/0x.dir/server.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object 0x/CMakeFiles/0x.dir/server.cpp.o"
 	cd /home/aj/git/0x/build/0x && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/0x.dir/server.cpp.o -c /home/aj/git/0x/0x/server.cpp
 
 0x/CMakeFiles/0x.dir/server.cpp.i: cmake_force
@@ -98,7 +111,7 @@ include 0x/CMakeFiles/0x.dir/flags.make
 
 0x/CMakeFiles/0x.dir/hex.cpp.o: 0x/CMakeFiles/0x.dir/flags.make
 0x/CMakeFiles/0x.dir/hex.cpp.o: ../0x/hex.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object 0x/CMakeFiles/0x.dir/hex.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object 0x/CMakeFiles/0x.dir/hex.cpp.o"
 	cd /home/aj/git/0x/build/0x && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/0x.dir/hex.cpp.o -c /home/aj/git/0x/0x/hex.cpp
 
 0x/CMakeFiles/0x.dir/hex.cpp.i: cmake_force
@@ -111,7 +124,7 @@ include 0x/CMakeFiles/0x.dir/flags.make
 
 0x/CMakeFiles/0x.dir/main.cpp.o: 0x/CMakeFiles/0x.dir/flags.make
 0x/CMakeFiles/0x.dir/main.cpp.o: ../0x/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object 0x/CMakeFiles/0x.dir/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object 0x/CMakeFiles/0x.dir/main.cpp.o"
 	cd /home/aj/git/0x/build/0x && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/0x.dir/main.cpp.o -c /home/aj/git/0x/0x/main.cpp
 
 0x/CMakeFiles/0x.dir/main.cpp.i: cmake_force
@@ -126,6 +139,7 @@ include 0x/CMakeFiles/0x.dir/flags.make
 0x_OBJECTS = \
 "CMakeFiles/0x.dir/tcp/socket_connection.cpp.o" \
 "CMakeFiles/0x.dir/tcp/socket.cpp.o" \
+"CMakeFiles/0x.dir/game.cpp.o" \
 "CMakeFiles/0x.dir/server.cpp.o" \
 "CMakeFiles/0x.dir/hex.cpp.o" \
 "CMakeFiles/0x.dir/main.cpp.o"
@@ -135,12 +149,13 @@ include 0x/CMakeFiles/0x.dir/flags.make
 
 0x/0x: 0x/CMakeFiles/0x.dir/tcp/socket_connection.cpp.o
 0x/0x: 0x/CMakeFiles/0x.dir/tcp/socket.cpp.o
+0x/0x: 0x/CMakeFiles/0x.dir/game.cpp.o
 0x/0x: 0x/CMakeFiles/0x.dir/server.cpp.o
 0x/0x: 0x/CMakeFiles/0x.dir/hex.cpp.o
 0x/0x: 0x/CMakeFiles/0x.dir/main.cpp.o
 0x/0x: 0x/CMakeFiles/0x.dir/build.make
 0x/0x: 0x/CMakeFiles/0x.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable 0x"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/aj/git/0x/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable 0x"
 	cd /home/aj/git/0x/build/0x && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/0x.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

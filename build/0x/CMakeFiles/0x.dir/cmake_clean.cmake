@@ -1,6 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/0x.dir/tcp/socket_connection.cpp.o"
   "CMakeFiles/0x.dir/tcp/socket.cpp.o"
+  "CMakeFiles/0x.dir/game.cpp.o"
   "CMakeFiles/0x.dir/server.cpp.o"
   "CMakeFiles/0x.dir/hex.cpp.o"
   "CMakeFiles/0x.dir/main.cpp.o"

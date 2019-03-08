@@ -125,6 +125,33 @@ depend:
 	cd /home/aj/git/0x/build && $(MAKE) -f 0x/CMakeFiles/0x.dir/build.make 0x/CMakeFiles/0x.dir/build
 .PHONY : 0x/fast
 
+game.o: game.cpp.o
+
+.PHONY : game.o
+
+# target to build an object file
+game.cpp.o:
+	cd /home/aj/git/0x/build && $(MAKE) -f 0x/CMakeFiles/0x.dir/build.make 0x/CMakeFiles/0x.dir/game.cpp.o
+.PHONY : game.cpp.o
+
+game.i: game.cpp.i
+
+.PHONY : game.i
+
+# target to preprocess a source file
+game.cpp.i:
+	cd /home/aj/git/0x/build && $(MAKE) -f 0x/CMakeFiles/0x.dir/build.make 0x/CMakeFiles/0x.dir/game.cpp.i
+.PHONY : game.cpp.i
+
+game.s: game.cpp.s
+
+.PHONY : game.s
+
+# target to generate assembly for a file
+game.cpp.s:
+	cd /home/aj/git/0x/build && $(MAKE) -f 0x/CMakeFiles/0x.dir/build.make 0x/CMakeFiles/0x.dir/game.cpp.s
+.PHONY : game.cpp.s
+
 hex.o: hex.cpp.o
 
 .PHONY : hex.o
@@ -269,6 +296,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... 0x"
 	@echo "... edit_cache"
+	@echo "... game.o"
+	@echo "... game.i"
+	@echo "... game.s"
 	@echo "... hex.o"
 	@echo "... hex.i"
 	@echo "... hex.s"

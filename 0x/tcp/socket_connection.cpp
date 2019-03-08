@@ -30,7 +30,7 @@ Socket server_bind(std::string port){
 
 	int sock = -1;
 	for(auto p = server_info; p != nullptr; p = p->ai_next){
-		sock = socket(p->ai_family,
+		sock = ::socket(p->ai_family,
 									p->ai_socktype,
 									p->ai_protocol);
 
@@ -63,11 +63,11 @@ Socket server_bind(std::string port){
 		return {};
 	}
 
-	return Socket(sock, bound_ip);
+	return static_cast<Socket>(sock);
 }
 
 void server_listen(Socket server, uint32_t backlog){
-	if(listen(server.handle, backlog) == -1){
+	if(listen(server, backlog) == -1){
 		printf("Listen failed\n");
 	}
 }
@@ -77,14 +77,15 @@ Socket server_accept(Socket server){
 	static socklen_t sin_size;
 
 	sin_size = sizeof(their_addr);
-	int sock = accept(server.handle, (sockaddr*)&their_addr, &sin_size);
+	int sock = accept(server, (sockaddr*)&their_addr, &sin_size);
 
 	if(sock == -1){
 		printf("accept() failed!\n");
 		return {};
 	}
 
-	return Socket(sock, ntop(&their_addr));
+	//return Socket(sock, ntop(&their_addr));
+	return static_cast<Socket>(sock);
 }
 
 Socket client_bind(std::string ip, std::string port){
@@ -102,7 +103,7 @@ Socket client_bind(std::string ip, std::string port){
 	int sock = -1;
 	addrinfo* p;
 	for(p = server_info; p != nullptr; p = p->ai_next){
-		sock = socket(p->ai_family,
+		sock = ::socket(p->ai_family,
 									p->ai_socktype,
 									p->ai_protocol);
 
@@ -130,7 +131,8 @@ Socket client_bind(std::string ip, std::string port){
 		printf("Error: failed to bind socket\n");
 	}
 
-	return Socket(sock, server_ip);
+	//return Socket(sock, server_ip);
+	return static_cast<Socket>(sock);
 }
 
 

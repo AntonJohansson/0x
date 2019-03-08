@@ -35,13 +35,15 @@ functional
 -
 
 /home/aj/git/0x/0x/hex.hpp
+string
+-
 stdint.h
 -
 functional
 -
 array
 -
-math.h
+cmath
 -
 assert.h
 -
@@ -61,12 +63,6 @@ sys/epoll.h
 -
 sys/event.h
 -
-
-/home/aj/git/0x/0x/main.cpp
-server.hpp
-/home/aj/git/0x/0x/server.hpp
-game.hpp
-/home/aj/git/0x/0x/game.hpp
 
 /home/aj/git/0x/0x/network/binary_encoding.hpp
 stdint.h
@@ -105,6 +101,8 @@ string_helper.hpp
 /home/aj/git/0x/0x/string_helper.hpp
 number_types.hpp
 /home/aj/git/0x/0x/number_types.hpp
+network/binary_encoding.hpp
+/home/aj/git/0x/0x/network/binary_encoding.hpp
 stdio.h
 -
 thread

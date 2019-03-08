@@ -4,6 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "/home/aj/git/0x/0x/game.cpp" "/home/aj/git/0x/build/0x/CMakeFiles/0x.dir/game.cpp.o"
   "/home/aj/git/0x/0x/hex.cpp" "/home/aj/git/0x/build/0x/CMakeFiles/0x.dir/hex.cpp.o"
   "/home/aj/git/0x/0x/main.cpp" "/home/aj/git/0x/build/0x/CMakeFiles/0x.dir/main.cpp.o"
   "/home/aj/git/0x/0x/server.cpp" "/home/aj/git/0x/build/0x/CMakeFiles/0x.dir/server.cpp.o"
