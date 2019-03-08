@@ -8,7 +8,17 @@ HexagonalMap::HexagonalMap(int radius, float hex_size, int players)
 		players(players){
 	size_t size = (2*radius+1)*(2*radius+1);
 	storage = new HexCell[size];
-	
+
+	// midpoints
+	int mq = 2*radius+1;
+	int mr = -radius-1;
+	for(auto& [q, r] : offset_midpoints){
+		q = mq;
+		r = mr;
+
+		std::tie(mq, mr) = axial::rotate_hex(mr, mq, 0, 0);
+	}
+		
 	// might not be necessary
 	for_each([&](int q, int r, HexCell& cell){
 				//printf("%i\n", index(q,r));

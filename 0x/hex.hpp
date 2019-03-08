@@ -9,6 +9,10 @@
 
 // Hexagons are point-tipped!
 
+struct HexVec{
+	int q, r;
+};
+
 struct HexCell{
 	int q = 0, r = 0;
 	int resources = 0;
@@ -25,6 +29,9 @@ struct HexagonalMap{
 
 	int players = 0;
 	HexCell* storage = nullptr;
+
+	// used in wrapping
+	std::array<HexVec, 6> offset_midpoints;
 
 	HexagonalMap(int radius, float hex_size, int players);
 
@@ -175,6 +182,35 @@ static std::pair<int,int> closest_hex(HexagonalMap& map, float x, float y){
 	new_y *= 1/det;
 
 	return hex_round(new_x, new_y);
+}
+
+static std::tuple<int,int,int> to_cube(int q, int r){
+	return {q, -q-r, r};
+}
+
+static int distance(int q1, int r1, int q2, int r2){
+	std::abs(), std::abs(), std::abs()
+}
+
+static std::pair<int,int> rotate_hex(int qP, int rP, int qC, int rC){
+	auto [xP, yP, zP] = to_cube(qP, rP);
+	auto [xC, yC, zC] = to_cube(qC, rC);
+
+	int dx = xP - xC;
+	int dy = yP - yC;
+	int dz = zP - zC;
+
+	// Rotation clockwise by 60 deg
+	int x = -dz;
+	int y = -dx;
+	int z = -dy;
+
+	x += xC;
+	y += yC;
+	z += zC;
+
+	// cube to axial
+	return {x, z};
 }
 
 }
