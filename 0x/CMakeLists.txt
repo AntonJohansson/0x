@@ -11,7 +11,7 @@ project(${PROJECT})
 add_executable(${PROJECT} ${SOURCES})
 
 target_compile_options(${PROJECT} PRIVATE
-	-std=c++1z -g
+	-std=c++17 -g
 	)
 
 target_link_libraries(${PROJECT}

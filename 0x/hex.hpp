@@ -1,9 +1,10 @@
 #pragma once
 
+#include <string>
 #include <stdint.h>
 #include <functional>
 #include <array>
-#include <math.h>
+#include <cmath>
 #include <assert.h>
 
 // Hexagons are point-tipped!
@@ -99,8 +100,14 @@ constexpr float pi_over_six = M_PI/6.0f;
 // unit vectors
 constexpr float x1 = 1.0f;
 constexpr float x2 = 0.0f;
-constexpr float y1 = cos(pi_over_six)*cos(pi_over_six*4);
-constexpr float y2 = cos(pi_over_six)*sin(pi_over_six*4);
+// cos/sin not consexpr
+//const float y1 = cos(pi_over_six)*cos(pi_over_six*4);
+//const float y2 = cos(pi_over_six)*sin(pi_over_six*4);
+// cos(pi/6)  = 0.866025403784438646763723170752936183471402626905190314
+// cos(4pi/6) = -0.5
+// sin(4pi/6) = 0.866025403784438646763723170752936183471402626905190314
+constexpr float y1 = 0.8660254f*(-0.5f);
+constexpr float y2 = 0.8660254f*0.8660254;
 
 static std::pair<float, float> to_screen(HexagonalMap& map, int q, int r){
 	return {r*2*map.hex_size*axial::y1 + q*map.hex_width*axial::x1, r*2*map.hex_size*axial::y2};
