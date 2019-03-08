@@ -95,7 +95,7 @@ void disconnect_from_session(SessionInfo& info){
 			active_sessions.erase(info.name);
 		}
 	}else{
-		printf("Trying to disconnect from session %s that does not exist!\n", info.name);
+		printf("Trying to disconnect from session %s that does not exist!\n", info.name.c_str());
 	}
 }
 
