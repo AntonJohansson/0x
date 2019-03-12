@@ -96,7 +96,7 @@ static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, c
 		print_session(session);
 		return {true, name, mode};
 	}else if(max_players > 0){
-		auto& [key, session] = active_sessions.emplace(name);
+		Session session = {};
 		session.name = name;
 		session.max_players = max_players;
 
@@ -107,7 +107,10 @@ static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, c
 			session.player_handles.push_back(socket_handle);
 			session.players++;
 		}
-		//auto& [key, session] = active_sessions.insert({name, {
+
+		active_sessions.insert({name, session});
+
+				//auto& [key, session] = active_sessions.insert({name, {
 		//		name, 
 		//		(mode == OBSERVER) ? ({socket_handle}) : ({}),
 		//		(mode == PLAYER) ? ({socket_handle}) : ({}),
