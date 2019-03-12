@@ -20,6 +20,10 @@ struct HexCell{
 	bool selected = false;
 };
 
+namespace axial{
+static int distance(int q1, int r1, int q2, int r2);
+}
+
 struct HexagonalMap{
 	const int radius;
 
@@ -46,9 +50,24 @@ struct HexagonalMap{
 	}
 
 	inline HexCell& at(int q, int r){
+		if(axial::distance(q,r, 0,0) > radius){
+			int smallest_distance = 2*radius;
+			int smallest_i = 0;
+			for(int i = 0; i < offset_midpoints.size(); i++){
+				auto d = axial::distance(q,r,offset_midpoints[i].q, offset_midpoints[i].r);
+				if(d < smallest_distance){
+					smallest_i = i;
+					smallest_distance = d;
+				}
+			}
+
+			q -= offset_midpoints[smallest_i].q;
+			r -= offset_midpoints[smallest_i].r;
+		}
+
+		assert(contains(q, r));
 		HexCell& h = storage[index(q,r)];
 		//assert(h.player_id != 0);
-		assert(contains(q, r));
 		return h;
 	}
 
@@ -185,11 +204,18 @@ static std::pair<int,int> closest_hex(HexagonalMap& map, float x, float y){
 }
 
 static std::tuple<int,int,int> to_cube(int q, int r){
-	return {q, -q-r, r};
+	// Usually y = -q-r, but the r-axis in our system is flipped
+	return {q, -q+r, r};
+}
+
+static int cube_distance(int x1, int y1, int z1, int x2, int y2, int z2){
+	return (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z1-z2))/2;
 }
 
 static int distance(int q1, int r1, int q2, int r2){
-	std::abs(), std::abs(), std::abs()
+	auto [x1,y1,z1] = to_cube(q1, r1);
+	auto [x2,y2,z2] = to_cube(q2, r2);
+	return cube_distance(x1, y1, z1, x2, y2, z2);
 }
 
 static std::pair<int,int> rotate_hex(int qP, int rP, int qC, int rC){
