@@ -50,7 +50,9 @@ struct HexagonalMap{
 	}
 
 	inline HexCell& at(int q, int r){
+		printf("q,r: {%i, %i}\n", q, r);
 		if(axial::distance(q,r, 0,0) > radius){
+			printf("q,r outside radius %i vs %i\n", axial::distance(q, r, 0, 0), radius);
 			int smallest_distance = 2*radius;
 			int smallest_i = 0;
 			for(int i = 0; i < offset_midpoints.size(); i++){
@@ -63,6 +65,8 @@ struct HexagonalMap{
 
 			q -= offset_midpoints[smallest_i].q;
 			r -= offset_midpoints[smallest_i].r;
+
+			printf("new q, r: %i, %i\n", q, r);
 		}
 
 		assert(contains(q, r));

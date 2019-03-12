@@ -10,8 +10,10 @@ HexagonalMap::HexagonalMap(int radius, float hex_size, int players)
 	storage = new HexCell[size];
 
 	// midpoints
-	int mq = 2*radius+1;
-	int mr = -radius-1;
+	int mq = radius;
+	int mr = -radius - 1;
+	//int mq = 2*radius+1;
+	//int mr = -radius-1;
 	for(auto& [q, r] : offset_midpoints){
 		q = mq;
 		r = mr;
