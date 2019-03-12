@@ -154,6 +154,8 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 
 		BinaryData data;
 		encode::u8(data, 2);
+
+		printf("seding observer data of size: %lu\n", data.size());
 		serialize_map(data, *game.map);
 
 		for(auto& s : observers){
@@ -177,8 +179,13 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 	auto& cell0 = game.map->at(q0, r0);
 	auto& cell1 = game.map->at(q1, r1);
 
-	cell0.resources -= amount;
-
+	if(amount <= cell0.resources){
+		cell0.resources -= amount;
+	}else{
+		printf("invalid transaction\n");
+		return;
+	}
+	
 	if(cell1.player_id != cell0.player_id){
 		if(cell1.resources < amount){
 			cell1.resources = amount - cell1.resources;
@@ -186,6 +193,10 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 		}
 	}else{
 		cell1.resources += amount;
+	}
+
+	if(cell0.resources == 0){
+		cell0.player_id = -1;
 	}
 
 	game.waiting_on_turn = false;

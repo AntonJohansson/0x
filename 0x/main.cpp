@@ -6,6 +6,7 @@
 // 	- implement rotataions
 // 	- implement map folding
 // 	https://gamedev.stackexchange.com/questions/137587/creating-a-hexagonal-wraparound-map/137603#137603
+// 	check that midpoints are correct
 
 int main(){
 	//set.add(0, [](int){
