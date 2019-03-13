@@ -2,6 +2,7 @@ set(PROJECT tests)
 set(SOURCES
 		../0x/hex.cpp
 		hex_tests.cpp
+		memory_tests.cpp
 		)
 
 project(${PROJECT})
