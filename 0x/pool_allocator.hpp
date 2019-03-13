@@ -13,8 +13,6 @@
 //#include <iomanip>
 //#include <cassert>
 
-namespace weq::memory{
-
 enum Mode{
   RESIZE,
   NO_RESIZE,
@@ -115,5 +113,3 @@ private:
   std::queue<T*> _free_list;
   std::vector<u8*> _memory_blocks;
 };
-
-}

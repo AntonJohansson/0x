@@ -1,11 +1,11 @@
 #pragma once
 
 #include "binary_encoding.hpp"
-#include "../hex.hpp"
+#include "../hex_map.hpp"
 
-static void serialize_map(BinaryData& data, HexagonalMap& map){
+static void serialize_map(BinaryData& data, HexMap& map){
 	encode::multiple_integers(data, map.radius, map.players);
-	map.for_each([&](int q, int r, HexCell& cell){
-				encode::multiple_integers(data, q, r, cell.player_id, cell.resources);
+	hex_map::for_each(map, [&](HexCell& cell){
+				encode::multiple_integers(data, cell.q, cell.r, cell.player_id, cell.resources);
 			});
 }
