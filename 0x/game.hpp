@@ -151,14 +151,14 @@ static void disconnect_from_session(SessionInfo& info){
 }
 
 static void send_observer_data(std::vector<int> observers, Session& session){
-	if(auto game_found = active_games.at(session.name)){
+	if(auto game_found = active_games.at(session.name); game_found && session.observers > 0){
 		auto& game = *game_found;
 
 		BinaryData data;
 		encode::u8(data, 2);
 
-		printf("seding observer data of size: %lu\n", data.size());
 		serialize_map(data, *game.map);
+		printf("seding observer data of size: %lu\n", data.size());
 
 		for(auto& s : observers){
 			tcp_socket::send_all(s, &data[0], data.size());
@@ -224,7 +224,16 @@ static void do_turn(Session& session, Game& game){
 
 		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
 		game.waiting_on_turn = true;
-		game.current_player_turn = game.current_player_turn % session.max_players;
+
+		// END ROUND
+		if(++game.current_player_turn >= session.max_players){
+			game.current_player_turn -= session.max_players;
+			hex_map::for_each(*game.map, [&](auto& cell){
+						if(cell.player_id != -1){
+							cell.resources++;
+						}
+					});
+		}
 	}
 }
 
