@@ -66,7 +66,8 @@ AxialVec axial_rotate(const AxialVec& point, const AxialVec& center){
 	auto c_delta = c_point - c_center;
 
 	// Rotation clockwise by 60 deg
-	CubeVec v = {-c_delta.z, -c_delta.x, -c_delta.y};
+	// [x y z] -> [-y z x]
+	CubeVec v = {-c_delta.y, c_delta.z, c_delta.x};
 	v += c_center;
 	
 	return cube_to_axial(v);
