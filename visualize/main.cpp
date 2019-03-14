@@ -45,6 +45,55 @@ void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Co
 
 
 
+///////////// COLORS
+struct RGB{float r, g, b;};
+struct HSL{float h, s, l;};
+
+RGB hsl_to_rgb(HSL hsl){
+	static auto f = [](HSL hsl, int n) -> float{
+		auto k = fmod((n + hsl.h/30), 12);
+		auto a = hsl.s*fmin(hsl.l, 1 - hsl.l);
+		return hsl.l - a*fmax(fmin(fmin(k-3, 9-k),1),-1);
+	};
+
+	return {f(hsl, 0), f(hsl, 8), f(hsl, 4)};
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -72,40 +121,51 @@ void receive_data(int s){
 		total_data += incoming_data;
 	}
 
+
 	BinaryData data(total_data.begin(), total_data.end());
-	printf("receive data of size %i\n", (int)data.size());
+	printf("received data of size %lu\n", data.size());
 
-	uint8_t packet_type = 0;
-	decode::integer(data, packet_type);
+	// handle packet
+	while(!data.empty()){
+		uint32_t total_data_size = data.size();
+		uint32_t packet_size;
+		decode::integer(data, packet_size);
+		printf("handling packet of size: %u\n", packet_size);
 
-	if(packet_type == 1){ // LIST
-		std::string session_name, text_string;
-		sessions.clear();
-		while(!data.empty()){
-			session_name = decode::string(data);
-			sessions.push_back(session_name);
-			text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
-		}
-		sessions_text.setString(text_string);
-	}else if(packet_type == 2){ // MAP
-		int radius, players;
-		decode::multiple_integers(data, radius, players);
-		printf("radius: %i, players: %i\n", radius, players);
-		map.generate_storage(radius);
-		map.players = players;
+		assert(packet_size <= data.size());
 
-		while(!data.empty()){
-			int q;
-			int r;
-			int player_id;
-			int resources;
-			decode::multiple_integers(data, q, r, player_id, resources);
-			printf("%i, %i, %i, %i\n", q, r, player_id, resources);
-			auto& h = map.at(q, r);
-			h.q = q;
-			h.r = r;
-			h.player_id = player_id;
-			h.resources = resources;
+		uint8_t packet_type = 0;
+		decode::integer(data, packet_type);
+
+		if(packet_type == 1){ // LIST
+			std::string session_name, text_string;
+			sessions.clear();
+			while(!data.empty()){
+				session_name = decode::string(data);
+				sessions.push_back(session_name);
+				text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
+			}
+			sessions_text.setString(text_string);
+		}else if(packet_type == 2){ // MAP
+			int radius, players;
+			decode::multiple_integers(data, radius, players);
+			printf("radius: %i, players: %i\n", radius, players);
+			map.generate_storage(radius);
+			map.players = players;
+
+			while(data.size() > total_data_size - packet_size){
+				int q;
+				int r;
+				int player_id;
+				int resources;
+				decode::multiple_integers(data, q, r, player_id, resources);
+				printf("%i, %i, %i, %i\n", q, r, player_id, resources);
+				auto& h = map.at(q, r);
+				h.q = q;
+				h.r = r;
+				h.player_id = player_id;
+				h.resources = resources;
+			}
 		}
 	}
 }
@@ -255,10 +315,12 @@ int main(){
 					y = SCREEN_HEIGHT - y;
 
 					if(cell.player_id >= 0){
-						auto color = sf::Color(
-							0.5f*(cell.player_id+1)*255/(map.players),
-							0.5f*(cell.player_id+2)*255/(map.players),
-							0.5f*(cell.player_id+3)*255/(map.players));
+						auto [r,g,b] = hsl_to_rgb({cell.player_id*360.0f/map.players, 0.5f, 0.2f + fmin((float)cell.resources, 0.6f*300.0f)/300.0f});
+						auto color = sf::Color(255*r, 255*g, 255*b);
+						//auto color = sf::Color(
+						//	0.5f*(cell.player_id+1)*255/(map.players),
+						//	0.5f*(cell.player_id+2)*255/(map.players),
+						//	0.5f*(cell.player_id+3)*255/(map.players));
 					draw_hexagon(window, map.hex_size, x, y, color);
 					} else{
 					draw_hexagon(window, map.hex_size, x, y, sf::Color(47,47,47));

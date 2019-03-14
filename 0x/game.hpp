@@ -47,6 +47,7 @@ struct SessionInfo{
 struct Game{
 	bool waiting_on_turn = false;
 	int current_player_turn = 0;
+	int* player_scores = nullptr;
 	Session* session = nullptr;
 	HexMap* map = nullptr;
 };
@@ -158,7 +159,9 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 		encode::u8(data, 2);
 
 		serialize_map(data, *game.map);
-		printf("seding observer data of size: %lu\n", data.size());
+		printf("sending observer data of size: %lu\n", data.size());
+
+		encode_frame_length(data);
 
 		for(auto& s : observers){
 			tcp_socket::send_all(s, &data[0], data.size());
@@ -169,7 +172,9 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 static void start_game(Session& session){
 	auto& [name, game] = active_games.insert({session.name, {}});
 
-	game.map = map_allocator.alloc(3, session.players);
+	game.player_scores = new int[session.max_players];
+
+	game.map = map_allocator.alloc(5, session.players);
 	game.session = &session;
 
 	if(session.observers > 0){
@@ -210,8 +215,12 @@ static void do_turn(Session& session, Game& game){
 
 		BinaryData data;
 		int count = 0;
+		// TODO: rebuilding map for every player, might not be necessary
+		// only need to track changes
+		game.player_scores[game.current_player_turn] = 0;
 		hex_map::for_each(*game.map, [&](HexCell& cell){
 					if(cell.player_id == game.current_player_turn){
+						game.player_scores[game.current_player_turn] += cell.resources;
 						encode::multiple_integers(data, cell.q, cell.r, 1, cell.resources);
 						for(auto& n : hex::axial_neighbours({cell.q, cell.r})){
 							auto n_cell = hex_map::at(*game.map, n);
@@ -220,10 +229,13 @@ static void do_turn(Session& session, Game& game){
 					}
 				});
 
-		std::cout << data.size() << std::endl;
-
-		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
-		game.waiting_on_turn = true;
+		// this should be fine for trolling
+		if(game.player_scores[game.current_player_turn] > 0){
+			encode_frame_length(data);
+			printf("sending player data of size %lu\n", data.size());
+			tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
+			game.waiting_on_turn = true;
+		}
 
 		// END ROUND
 		if(++game.current_player_turn >= session.max_players){

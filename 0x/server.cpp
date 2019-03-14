@@ -7,6 +7,7 @@
 #include "string_helper.hpp"
 #include "number_types.hpp"
 #include "network/binary_encoding.hpp"
+#include "network/serialize_data.hpp"
 
 #include <stdio.h>
 #include <thread>
@@ -154,6 +155,7 @@ void receive_client_data(int s){
 						encode::string(data, session.name);
 						});
 
+				encode_frame_length(data);
 				tcp_socket::send_all(s, &data[0], data.size());
 			}
 		}else{
