@@ -9,9 +9,6 @@
 
 #include "number_types.hpp"
 
-//#include <iostream>
-//#include <iomanip>
-//#include <cassert>
 
 enum Mode{
   RESIZE,
