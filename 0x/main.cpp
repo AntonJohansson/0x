@@ -1,12 +1,10 @@
 #include "server.hpp"
 #include "game.hpp"
+#include <chrono>
+#include <thread>
 
 // TODO:
-// 	https://www.redblobgames.com/grids/hexagons/#rotation
-// 	- implement rotataions
-// 	- implement map folding
-// 	https://gamedev.stackexchange.com/questions/137587/creating-a-hexagonal-wraparound-map/137603#137603
-// 	check that midpoints are correct
+//	- length frame encode network data
 
 int main(){
 	//set.add(0, [](int){
@@ -20,6 +18,7 @@ int main(){
 	server::start();
 
 	while(server::is_running()){
+		std::this_thread::sleep_for(std::chrono::milliseconds(250));
 		game::poll_sessions();
 
 		// at start of new game send inital board to observers
