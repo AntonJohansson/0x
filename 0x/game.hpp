@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <algorithm>
 
 #include "network/serialize_data.hpp"
 
@@ -55,6 +56,13 @@ struct Game{
 extern HashMap<std::string, Session> active_sessions;
 extern HashMap<std::string, Game> active_games;
 extern PoolAllocator<HexMap> map_allocator;
+
+struct CompleteTurnData{
+	Game* game;
+	int resources;
+	int q0, r0, q1, r1;
+};
+extern std::vector<CompleteTurnData> complete_turn_data;
 
 
 
@@ -131,7 +139,7 @@ static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, c
 	return {};
 }
 
-static void disconnect_from_session(SessionInfo& info){
+static void disconnect_from_session(int handle, SessionInfo& info){
 	if(auto session_found = active_sessions.at(info.name)){
 		auto& session = *session_found;
 		switch(info.mode){
@@ -139,11 +147,22 @@ static void disconnect_from_session(SessionInfo& info){
 			case OBSERVER: 	session.observers--; 	break;
 		};
 
+		{
+			auto& v = session.observer_handles;
+			v.erase(std::remove(v.begin(), v.end(), handle), v.end());
+		}
 		printf("Disconnecting from session\n");
 		print_session(session);
 
 		if(session.players <= 0 && session.observers <= 0){
 			printf("Session empty: closing\n");
+
+			if(auto game_found = active_games.at(info.name)){
+				auto& game = *game_found;
+				map_allocator.dealloc(game.map);
+				active_games.erase(info.name);
+			}
+
 			active_sessions.erase(info.name);
 		}
 	}else{
@@ -159,7 +178,7 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 		encode::u8(data, 2);
 
 		serialize_map(data, *game.map);
-		printf("sending observer data of size: %lu\n", data.size());
+		//printf("sending observer data of size: %lu\n", data.size());
 
 		encode_frame_length(data);
 
@@ -210,11 +229,15 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 }
 
 static void do_turn(Session& session, Game& game){
+	//std::cout << "waiting on turn: " << game.waiting_on_turn << "\n";
+	//for(int i = 0; i < session.max_players; i++){
+	//	std::cout << game.player_scores[i] << "\n";
+	//}
+
 	if(!game.waiting_on_turn){
 		send_observer_data(session.observer_handles, session);
 
 		BinaryData data;
-		int count = 0;
 		// TODO: rebuilding map for every player, might not be necessary
 		// only need to track changes
 		game.player_scores[game.current_player_turn] = 0;
@@ -232,7 +255,7 @@ static void do_turn(Session& session, Game& game){
 		// this should be fine for trolling
 		if(game.player_scores[game.current_player_turn] > 0){
 			encode_frame_length(data);
-			printf("sending player data of size %lu\n", data.size());
+			//printf("sending player data of size %lu\n", data.size());
 			tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
 			game.waiting_on_turn = true;
 		}
@@ -241,7 +264,7 @@ static void do_turn(Session& session, Game& game){
 		if(++game.current_player_turn >= session.max_players){
 			game.current_player_turn -= session.max_players;
 			hex_map::for_each(*game.map, [&](auto& cell){
-						if(cell.player_id != -1){
+						if(cell.player_id != -1 && cell.resources < 300){
 							cell.resources++;
 						}
 					});
@@ -260,12 +283,16 @@ static void poll_sessions(){
 			}
 		});
 
-	active_games.for_each([](auto& pair){
-				auto& game = pair.value;
-				auto& session = *game.session;
+	for(auto& turn_data : complete_turn_data){
+		complete_turn(*turn_data.game, turn_data.resources, turn_data.q0, turn_data.r0, turn_data.q1, turn_data.r1);
+	}
+	complete_turn_data.clear();
 
-				do_turn(session, game);
-			});
+	active_games.for_each([](auto& pair){
+			auto& game = pair.value;
+			auto& session = *game.session;
+			do_turn(session, game);
+		});
 }
 
 struct PlayerData{

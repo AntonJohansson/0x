@@ -100,7 +100,7 @@ void on_client_disconnect(int s){
 		auto connection = *connection_found;
 
 		if(connection.session_info.active){
-			game::disconnect_from_session(connection.session_info);
+			game::disconnect_from_session(s, connection.session_info);
 		}
 	}
 
@@ -122,7 +122,7 @@ void receive_client_data(int s){
 	//	total_data += incoming_data;
 	//}
 
-	printf("%lu bytes received\n", bytes_received);
+	//printf("%lu bytes received\n", bytes_received);
 	if(auto connection_opt = connections.at(s)){
 		auto& connection = *connection_opt;
 
@@ -130,7 +130,7 @@ void receive_client_data(int s){
 		if(compare_next_word(sv, "create_or_join") || compare_next_word(sv, "coj")){
 			// if we're already in a session, leave it
 			if(connection.session_info.active){
-				game::disconnect_from_session(connection.session_info);
+				game::disconnect_from_session(s, connection.session_info);
 			}
 
 			auto mode 		= get_next_word(sv);
@@ -163,17 +163,18 @@ void receive_client_data(int s){
 			BinaryData data(buffer, buffer + bytes_received);
 			decode::integer(data, packet_id);
 
-			printf("packet id: %i\n", static_cast<int>(packet_id));
+			//printf("packet id: %i\n", static_cast<int>(packet_id));
 
 			if(packet_id == 3){
 				int res, q0, r0, q1, r1;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
-				printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
+				//printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
 
 				if(auto game_found = game::active_games.at(connection.session_info.name)){
 					auto& game = *game_found;
 
-					game::complete_turn(game, res, q0, r0, q1, r1);
+					game::complete_turn_data.push_back({&game, res, q0, r0, q1, r1});
+					//game::complete_turn(game, res, q0, r0, q1, r1);
 				}
 			}
 		}

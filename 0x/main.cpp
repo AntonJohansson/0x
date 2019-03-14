@@ -4,14 +4,12 @@
 #include <thread>
 
 // TODO:
-//	- length frame encode network data
+//	- collect game statistics
 //	- restructure/rewrite newtork packet code
 //	- handle game rules correctly:
 //		- implement path finding
 //		- use path finding to check if moves are valid (within a closed region)
-//		- cap resource++ to 300
 //		- time limit for turn
-//	- handle oponents that have no hexes, currently the whole game freezes
 
 int main(){
 	//set.add(0, [](int){
@@ -25,7 +23,7 @@ int main(){
 	server::start();
 
 	while(server::is_running()){
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		game::poll_sessions();
 
 		// at start of new game send inital board to observers

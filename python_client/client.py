@@ -31,13 +31,14 @@ def interpret_turn_data(data):
 
 while 1:
     #try:
+    print("- waiting on packet size")
     packet_size_data = sock.recv(4)
     packet_size = struct.unpack('>I', packet_size_data)
     packet_size = packet_size[0]
-
-    print("received packet of size {}!".format(packet_size))
-
+    print("-- received packet of size {}!".format(packet_size))
+    print("- waiting for data")
     data = sock.recv(packet_size)
+    print("-- received data of size {}".format(len(data)))
     #except:
     #    continue
 
