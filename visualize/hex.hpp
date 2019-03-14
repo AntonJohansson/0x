@@ -18,9 +18,9 @@ struct HexCell{
 struct HexagonalMap{
 	int radius;
 
-	const float hex_size    = 20.0f;
-	const float hex_width   = sqrt(3)*hex_size;
-	const float hex_height  = 2.0f*hex_size;
+	float hex_size    = 20.0f;
+	float hex_width   = sqrt(3)*hex_size;
+	float hex_height  = 2.0f*hex_size;
 
 	int players = 0;
 	HexCell* storage = nullptr;
@@ -36,6 +36,10 @@ struct HexagonalMap{
 
 	inline void generate_storage(int r){
 		radius = r;
+		if(storage != nullptr){
+			delete[] storage;
+		}
+
 		size_t size = (2*radius+1)*(2*radius+1);
 		storage = new HexCell[size];
 	}

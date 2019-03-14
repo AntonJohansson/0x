@@ -10,12 +10,16 @@
 #include <future>
 #include <chrono>
 #include <vector>
+#include <mutex>
 
 #include "hex.hpp"
 #include "tcp/socket.hpp"
 #include "tcp/socket_connection.hpp"
 #include "io/poll_set.hpp"
 #include "network/binary_encoding.hpp"
+
+// TODO:
+// 	- pressing 1 while already in a game slows update rate to a crawl, it really shouldnt tho
 
 constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
@@ -27,6 +31,7 @@ sf::Text sessions_text;
 
 bool connected_to_server = false;
 
+HexagonalMap temp_map;
 HexagonalMap map;
 
 std::array<sf::Vertex,8> vertices;
@@ -140,7 +145,7 @@ void receive_data(int s){
 		if(packet_type == 1){ // LIST
 			std::string session_name, text_string;
 			sessions.clear();
-			while(!data.empty()){
+			while(data.size() > total_data_size - packet_size){
 				session_name = decode::string(data);
 				sessions.push_back(session_name);
 				text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
@@ -150,8 +155,10 @@ void receive_data(int s){
 			int radius, players;
 			decode::multiple_integers(data, radius, players);
 			printf("radius: %i, players: %i\n", radius, players);
-			map.generate_storage(radius);
-			map.players = players;
+
+			temp_map.storage = nullptr;
+			temp_map.players = players;
+			temp_map.generate_storage(radius);
 
 			while(data.size() > total_data_size - packet_size){
 				int q;
@@ -160,12 +167,15 @@ void receive_data(int s){
 				int resources;
 				decode::multiple_integers(data, q, r, player_id, resources);
 				printf("%i, %i, %i, %i\n", q, r, player_id, resources);
-				auto& h = map.at(q, r);
+				auto& h = temp_map.at(q, r);
 				h.q = q;
 				h.r = r;
 				h.player_id = player_id;
 				h.resources = resources;
 			}
+
+			delete[] map.storage;
+			map = temp_map;
 		}
 	}
 }
@@ -238,13 +248,6 @@ void reconnect(Socket& socket, PollSet& set){
 
 
 
-
-void transfer_resource(HexagonalMap& map, int q1, int r1, int q2, int r2, int amount){
-	auto have = map.at(q1, r1).resources;
-	assert(have >= amount);
-	map.at(q1, r1).resources -= amount;
-	map.at(q2, r2).resources += amount;
-}
 
 bool toggle_hex_positions = true;
 
