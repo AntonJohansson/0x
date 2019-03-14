@@ -89,7 +89,7 @@ void receive_data(int s){
 		sessions_text.setString(text_string);
 	}else if(packet_type == 2){ // MAP
 		int radius, players;
-		decode::multiple_integers(data,radius, players);
+		decode::multiple_integers(data, radius, players);
 		printf("radius: %i, players: %i\n", radius, players);
 		map.generate_storage(radius);
 		map.players = players;
@@ -187,13 +187,6 @@ void transfer_resource(HexagonalMap& map, int q1, int r1, int q2, int r2, int am
 }
 
 bool toggle_hex_positions = true;
-bool selecting_transfer = false;
-sf::Vector2i mouse_pos;
-int mouse_q;
-int mouse_r;
-int transfer_amount = 10;
-int transfer_from_q;
-int transfer_from_r;
 
 int main(){
 	PollSet set;
@@ -245,27 +238,7 @@ int main(){
 					case sf::Keyboard::Num4: if(sessions.size() > 3){socket.send_all("coj o " + sessions[3] + " 1");} break;
 					case sf::Keyboard::Num5: if(sessions.size() > 4){socket.send_all("coj o " + sessions[4] + " 1");} break;
 				}
-			}else if(event.type == sf::Event::MouseButtonPressed){
-				if(!selecting_transfer){
-					transfer_from_q = mouse_q;
-					transfer_from_r = mouse_r;
-
-					if(map.has_storage() && map.contains(transfer_from_q, transfer_from_r)){
-						map.at(transfer_from_q, transfer_from_r).selected = true;
-						selecting_transfer = true;
-					}
-				}else if(map.has_storage() && map.contains(mouse_q, mouse_r)){
-					transfer_resource(map, transfer_from_q, transfer_from_r, mouse_q, mouse_r, transfer_amount);
-					map.at(transfer_from_q, transfer_from_r).selected = false;
-					selecting_transfer = false;
-				}
 			}
-
-		}
-
-		mouse_pos = sf::Mouse::getPosition(window);
-		if(map.has_storage()){
-			std::tie(mouse_q, mouse_r) = axial::closest_hex(map, mouse_pos.x, mouse_pos.y);
 		}
 
 		window.clear(sf::Color(244,240,219));
@@ -281,15 +254,11 @@ int main(){
 					y += SCREEN_HEIGHT/2.0f;
 					y = SCREEN_HEIGHT - y;
 
-					if(mouse_q == q && mouse_r == r){
-						draw_hexagon(window, map.hex_size, x, y, sf::Color(0,0,100));
-					}else if(cell.selected){
-						draw_hexagon(window, map.hex_size, x, y, sf::Color(100,0,0));
-					}else if(cell.player_id > 0){
+					if(cell.player_id >= 0){
 						auto color = sf::Color(
-							0.5f*(cell.player_id+0)*255/map.players,
-							0.5f*(cell.player_id+1)*255/map.players,
-							0.5f*(cell.player_id+2)*255/map.players);
+							0.5f*(cell.player_id+1)*255/(map.players),
+							0.5f*(cell.player_id+2)*255/(map.players),
+							0.5f*(cell.player_id+3)*255/(map.players));
 					draw_hexagon(window, map.hex_size, x, y, color);
 					} else{
 					draw_hexagon(window, map.hex_size, x, y, sf::Color(47,47,47));
@@ -314,22 +283,6 @@ int main(){
 						window.draw(text);
 					}
 			});
-		}
-
-		if(map.has_storage()){
-			auto n = hex_neighbours(map, mouse_q, mouse_r);
-			for(auto hex : n){
-				//if(hex.player_id == 0)continue;
-
-				auto [x, y] = axial::to_screen(map, hex.q, hex.r);
-				x *= 1.05f;
-				y *= 1.05f;
-				x += SCREEN_WIDTH/2.0f;
-				y += SCREEN_HEIGHT/2.0f;
-				y = SCREEN_HEIGHT - y;
-
-				draw_hexagon(window, map.hex_size, x, y, sf::Color(0,100,0));
-			}
 		}
 
 		window.draw(sessions_text);
