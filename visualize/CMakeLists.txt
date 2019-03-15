@@ -16,12 +16,11 @@ target_compile_options(${PROJECT} PRIVATE
 	-std=c++1z -g
 	)
 
-# unix
 include_directories(${SFML_INCLUDE_DIR})
-target_link_libraries(${PROJECT}
-	sfml-graphics sfml-window sfml-system pthread
-	)
+# unix
+#target_link_libraries(${PROJECT}
+#	sfml-graphics sfml-window sfml-system pthread
+#	)
 # mac
-#include_directories(${SFML_INCLUDE_DIR})
-#target_link_libraries(${PROJECT} ${SFML_LIBRARIES})
+target_link_libraries(${PROJECT} ${SFML_LIBRARIES} pthread)
 
