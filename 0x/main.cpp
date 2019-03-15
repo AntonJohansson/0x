@@ -7,8 +7,8 @@
 //	- collect game statistics
 //	- restructure/rewrite newtork packet code
 //	- handle game rules correctly:
-//		- implement path finding
 //		- use path finding to check if moves are valid (within a closed region)
+//			- implement path finding
 //		- time limit for turn
 
 int main(){

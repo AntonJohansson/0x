@@ -11,7 +11,6 @@ struct HexCell{
 	int player_id = -1;
 };
 
-
 struct HexMap;
 struct HexCell;
 namespace hex_map{
@@ -29,17 +28,17 @@ struct HexMap{
 	HexMap(int r, int p)
 		: radius(r), players(p) {
 		// TODO: big nono
-		storage = new HexCell[(2*r+1)*(2*r+1)];
+		size_t size = (2*r+1)*(2*r+1);
+		storage = new HexCell[size];
 
 		// midpoints
 		hex::AxialVec m = {radius, -radius-1};
-		//int mq = 2*radius+1;
-		//int mr = -radius-1;
 		for(auto& v : offset_midpoints){
 			v = m;
 			m = hex::axial_rotate(m, {0,0});
 		}
 
+		// intialising start positions
 		hex::AxialVec start = {radius-1, 0};
 		for(int i = 0; i < players; i++){
 			auto& cell = hex_map::at(*this, start);
