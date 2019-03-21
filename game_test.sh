@@ -8,5 +8,8 @@ for i in $(seq 1 $n); do
 	termite -e "python python_client/client.py coj p hej $n"&
 done
 for i in $(seq 1 $n); do
-	termite -e "python python_client/client.py coj p tset $n"&
+	termite -e "python python_client/client.py coj p test $n"&
+done
+for i in $(seq 1 $n); do
+	termite -e "python python_client/client.py coj p snabb $n"&
 done

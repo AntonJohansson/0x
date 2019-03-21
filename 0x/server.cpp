@@ -168,7 +168,7 @@ void receive_client_data(int s){
 			if(packet_id == 3){
 				int res, q0, r0, q1, r1;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
-				//printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
+				printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
 
 				if(auto game_found = game::active_games.at(connection.session_info.name)){
 					auto& game = *game_found;

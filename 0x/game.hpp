@@ -223,7 +223,7 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 	if(amount <= cell0.resources){
 		cell0.resources -= amount;
 	}else{
-		printf("invalid transaction\n");
+		printf("invalid transaction: (%i,%i) has %i, trying to transfer %i\n", q0,r0,cell0,amount);
 		return;
 	}
 	
@@ -264,10 +264,13 @@ static void do_turn(Session& session, Game& game){
 					if(cell.player_id == game.current_player_turn){
 						game.player_scores[game.current_player_turn] += cell.resources;
 						encode::multiple_integers(data, cell.q, cell.r, 1, cell.resources);
+						//printf("%i, %i\n--------\n", cell.q, cell.r);
 						for(auto& n : hex::axial_neighbours({cell.q, cell.r})){
 							auto n_cell = hex_map::at(*game.map, n);
+							//printf("%i, %i\n", n_cell.q, n_cell.r);
 							encode::multiple_integers(data, n_cell.q, n_cell.r, static_cast<int>(n_cell.player_id == cell.player_id), n_cell.resources);
 						}
+						//printf("--------\n");
 					}
 				});
 
@@ -308,7 +311,10 @@ static void do_turn(Session& session, Game& game){
 					});
 		}
 	}else if(dur > std::chrono::milliseconds(300)){
-		printf("TIME LIMIT CROSSED!\n");
+		BinaryData data;
+		encode_error_message(data, "time limit crossed!");
+		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
+
 		game.waiting_on_turn = false;
 	}
 }

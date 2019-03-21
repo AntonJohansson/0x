@@ -9,7 +9,7 @@
 //	- handle game rules correctly:
 //		- use path finding to check if moves are valid (within a closed region)
 //			- implement path finding
-//		- time limit for turn
+//	- something is wrong with transactions or coordinates, trasfers are not happening corretly
 
 int main(){
 	//set.add(0, [](int){

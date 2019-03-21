@@ -12,7 +12,8 @@ enum class PacketType{
 	PLAYER_MAP,
 	// input
 	COMMAND,
-	TURN_TRANSACTION
+	TURN_TRANSACTION,
+	ERROR_MESSAGE,
 };
 
 struct SessionList{
@@ -45,11 +46,11 @@ inline void encode_packet(BinaryData& data, PacketType type){
 	BinaryData temp;
 
 	// Encode packet length
-	auto size = data.size();//sizeof(uint8_t);
+	auto size = data.size();
 	encode::u32(temp, size);
 
 	// Encode packet id 
-	//encode::u8(data, type);
+	encode::u8(temp, type);
 
 	append(temp, data);
 	data = temp;
@@ -73,4 +74,11 @@ inline PacketUnion decode_packet(BinaryData& data){
 	}
 
 }
+
+inline void encode_error_message(BinaryData& data, const std::string& message){
+	encode::string(data, message);
+	encode_packet(data, PacketType::ERROR_MESSAGE);
+}
+
+
 

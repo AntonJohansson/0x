@@ -14,7 +14,7 @@ struct HexCell{
 struct HexMap;
 struct HexCell;
 namespace hex_map{
-void for_each(const HexMap& map, std::function<void(HexCell&)> func);
+void for_each(HexMap& map, std::function<void(HexCell&)> func);
 HexCell& at(const HexMap& map, const hex::AxialVec& v);
 }
 
@@ -37,6 +37,11 @@ struct HexMap{
 			v = m;
 			m = hex::axial_rotate(m, {0,0});
 		}
+
+		// TODO: why is this needed to get correct q,r values?
+		hex_map::for_each(*this, [](auto& cell){
+				//printf("%i,%i\n", cell.q, cell.r);
+				});
 
 		// intialising start positions
 		hex::AxialVec start = {radius-1, 0};
@@ -90,7 +95,7 @@ inline HexCell& at(const HexMap& map, const hex::AxialVec& v){
 	return map.storage[index(map, new_v)];
 }
 
-inline void for_each(const HexMap& map, std::function<void(HexCell&)> func){
+inline void for_each(HexMap& map, std::function<void(HexCell&)> func){
 	for (int q = -map.radius; q <= map.radius; q++){
 		int r1 = std::max(-map.radius, q - map.radius);
 		int r2 = std::min( map.radius, q + map.radius);
