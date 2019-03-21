@@ -48,6 +48,7 @@ struct SessionInfo{
 
 struct Game{
 	bool waiting_on_turn = false;
+	int current_turn = 0;
 	int current_player_turn = 0;
 	int* player_scores = nullptr;
 	Session* session = nullptr;
@@ -178,7 +179,7 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 		BinaryData data;
 		encode::u8(data, 2);
 
-		serialize_map(data, *game.map);
+		serialize_game_state(data, game);
 		//printf("sending observer data of size: %lu\n", data.size());
 
 		encode_frame_length(data);
@@ -236,6 +237,7 @@ static void do_turn(Session& session, Game& game){
 	//}
 
 	if(!game.waiting_on_turn){
+		game.current_turn++;
 		send_observer_data(session.observer_handles, session);
 
 		BinaryData data;
@@ -252,6 +254,23 @@ static void do_turn(Session& session, Game& game){
 						}
 					}
 				});
+
+		// Check players left in game
+		int players_left = 0;
+		for(int i = 0; i < session.max_players; i++){
+			if(game.player_scores[i] > 0){
+				players_left++;
+			}
+		}
+
+		if(players_left == 1){
+			// game has ended, we have a winner
+			session.game_in_progress = false;
+			delete[] game.player_scores;
+			map_allocator.dealloc(game.map);
+			//active_games.erase(session.name);
+			return;
+		}
 
 		// this should be fine for trolling
 		if(game.player_scores[game.current_player_turn] > 0){

@@ -18,9 +18,6 @@
 #include "io/poll_set.hpp"
 #include "network/binary_encoding.hpp"
 
-// TODO:
-// 	- pressing 1 while already in a game slows update rate to a crawl, it really shouldnt tho
-
 constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
 
@@ -28,11 +25,15 @@ std::thread server_thread;
 
 std::vector<std::string> sessions;
 sf::Text sessions_text;
+sf::Text stats_text;
 
 bool connected_to_server = false;
 
 HexagonalMap temp_map;
 HexagonalMap map;
+
+int current_turn = 0;
+std::vector<int> player_scores;
 
 std::array<sf::Vertex,8> vertices;
 void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Color color){
@@ -152,9 +153,20 @@ void receive_data(int s){
 			}
 			sessions_text.setString(text_string);
 		}else if(packet_type == 2){ // MAP
-			int radius, players;
-			decode::multiple_integers(data, radius, players);
-			printf("radius: %i, players: %i\n", radius, players);
+			int radius, players, current_turn;
+			decode::multiple_integers(data, radius, players, current_turn);
+			printf("radius: %i, players: %i, current_turn: %i\n", radius, players);
+
+			std::string text = "Current turn: " + std::to_string(current_turn) + "\n";
+
+			player_scores.clear();
+			for(int i = 0; i < players; i++){
+				int player, score;
+				decode::multiple_integers(data, player, score);
+				text += std::to_string(player) + "\t" + std::to_string(score) + "\n";
+			}
+
+			stats_text.setString(text);
 
 			temp_map.storage = nullptr;
 			temp_map.players = players;
@@ -279,6 +291,11 @@ int main(){
 	sessions_text.setFillColor(sf::Color::Black);
 	sessions_text.setPosition({50, 50});
 
+	stats_text.setFont(font);
+	stats_text.setCharacterSize(20);
+	stats_text.setFillColor(sf::Color::Black);
+	stats_text.setPosition({800-300, 50});
+
 	while (window.isOpen()){
 		sf::Event event;
 		while(window.pollEvent(event)){
@@ -351,6 +368,7 @@ int main(){
 		}
 
 		window.draw(sessions_text);
+		window.draw(stats_text);
 
 		window.display();
 	}
