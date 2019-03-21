@@ -23,6 +23,7 @@ namespace{
 	std::thread server_thread;
 
 	struct Connection{
+		std::string ip_address = "";
 		game::SessionInfo session_info = {};
 		int handle = -1;
 	};
@@ -82,17 +83,15 @@ void poll_fds(){
 //
 
 void accept_client_connections(int s){
-	printf("Accepting new connection!\n");
-
-	auto new_socket = server_accept(server_socket);
+	auto [new_socket, addr] = server_accept(server_socket);
 	tcp_socket::set_nonblocking(new_socket);
 
-	printf("New connection %i : \n", s);
+	printf("New connection from %s -> %i\n", addr.c_str(), new_socket);
 
 	set.add(new_socket, 						receive_client_data);
 	set.on_disconnect(new_socket, 	on_client_disconnect);
 
-	connections.insert({new_socket, Connection{{}, new_socket}});
+	connections.insert({new_socket, Connection{addr, {}, new_socket}});
 }
 
 void on_client_disconnect(int s){
@@ -102,9 +101,10 @@ void on_client_disconnect(int s){
 		if(connection.session_info.active){
 			game::disconnect_from_session(s, connection.session_info);
 		}
+			
+		printf("Connection to %s -> %i :  closed!\n", connection.ip_address.c_str(), s);
 	}
 
-	printf("Connection to %i :  closed!\n", s);
 	tcp_socket::close(s);
 }
 

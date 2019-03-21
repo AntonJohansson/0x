@@ -72,7 +72,7 @@ void server_listen(Socket server, uint32_t backlog){
 	}
 }
 
-Socket server_accept(Socket server){
+std::pair<Socket, std::string> server_accept(Socket server){
 	static sockaddr_storage their_addr;
 	static socklen_t sin_size;
 
@@ -85,7 +85,7 @@ Socket server_accept(Socket server){
 	}
 
 	//return Socket(sock, ntop(&their_addr));
-	return static_cast<Socket>(sock);
+	return {static_cast<Socket>(sock), ntop(&their_addr)};
 }
 
 Socket client_bind(std::string ip, std::string port){

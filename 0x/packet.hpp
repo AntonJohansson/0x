@@ -42,11 +42,14 @@ inline void encode_packet(BinaryData& data, PacketType type){
 	// TODO: a lot of copies going on here
 	assert(type != PacketType::INVALID);
 
-	static BinaryData temp;
-	size_t size = data.size() + sizeof(uint8_t);
+	BinaryData temp;
 
-	encode::u32(data, size);
-	encode::u8(data, type);
+	// Encode packet length
+	auto size = data.size();//sizeof(uint8_t);
+	encode::u32(temp, size);
+
+	// Encode packet id 
+	//encode::u8(data, type);
 
 	append(temp, data);
 	data = temp;
@@ -57,14 +60,14 @@ inline PacketUnion decode_packet(BinaryData& data){
 
 	uint32_t size;
 	uint8_t packet_type;
-	decode::multiple_integer(data, size);
+	decode::multiple_integers(data, size);
 
 	switch(static_cast<PacketType>(packet_type)){
-			case SESSION_LIST:
-			case OBSERVER_MAP:
-			case PLAYER_MAP:
-			case COMMAND:
-			case TURN_TRANSACTION:
+			case PacketType::SESSION_LIST:
+			case PacketType::OBSERVER_MAP:
+			case PacketType::PLAYER_MAP:
+			case PacketType::COMMAND:
+			case PacketType::TURN_TRANSACTION:
 			default:
 				printf("Unrecognized packet type %i!\n", packet_type);
 	}

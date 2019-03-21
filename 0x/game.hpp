@@ -255,6 +255,7 @@ static void do_turn(Session& session, Game& game){
 
 		// this should be fine for trolling
 		if(game.player_scores[game.current_player_turn] > 0){
+			//encode_frame_length(data);
 			encode_packet(data, PacketType::PLAYER_MAP);
 			//printf("sending player data of size %lu\n", data.size());
 			tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
