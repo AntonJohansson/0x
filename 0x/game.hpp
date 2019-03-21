@@ -11,6 +11,7 @@
 #include <string_view>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 
 #include "network/serialize_data.hpp"
 
@@ -50,6 +51,8 @@ struct Game{
 	bool waiting_on_turn = false;
 	int current_turn = 0;
 	int current_player_turn = 0;
+	std::chrono::high_resolution_clock::time_point begin_turn_time_point;
+
 	int* player_scores = nullptr;
 	Session* session = nullptr;
 	HexMap* map = nullptr;
@@ -83,6 +86,16 @@ static void send_observer_data(std::vector<int> observers, Session& session);
 
 static void print_session(Session& session){
 	printf("%s:\n\tobservers: %i\n\tplayers %i/%i\n", session.name.c_str(), session.observers, session.players, session.max_players);
+}
+
+static void print_game(Game& game){
+	// bool waiting_on_turn = false;
+	// int current_turn = 0;
+	// int current_player_turn = 0;
+	// int* player_scores = nullptr;
+	// Session* session = nullptr;
+	// HexMap* map = nullptr;
+	printf("Game: %s\n\tcurrent_turn: %i\n\tcurrent_player_turn: %i\n", game.session->name.c_str(), game.current_turn, game.current_player_turn);
 }
 
 static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const std::string& name, int max_players){
@@ -235,8 +248,11 @@ static void do_turn(Session& session, Game& game){
 	//for(int i = 0; i < session.max_players; i++){
 	//	std::cout << game.player_scores[i] << "\n";
 	//}
+	auto dur = std::chrono::high_resolution_clock::now() - game.begin_turn_time_point;
 
 	if(!game.waiting_on_turn){
+		game.begin_turn_time_point = std::chrono::high_resolution_clock::now();
+
 		game.current_turn++;
 		send_observer_data(session.observer_handles, session);
 
@@ -265,10 +281,11 @@ static void do_turn(Session& session, Game& game){
 
 		if(players_left == 1){
 			// game has ended, we have a winner
+			printf("active_games.size(): %i\nmap_allocator.size(): %i\n", active_games.size(), map_allocator.size());
 			session.game_in_progress = false;
 			delete[] game.player_scores;
 			map_allocator.dealloc(game.map);
-			//active_games.erase(session.name);
+			active_games.erase(session.name);
 			return;
 		}
 
@@ -290,6 +307,9 @@ static void do_turn(Session& session, Game& game){
 						}
 					});
 		}
+	}else if(dur > std::chrono::milliseconds(300)){
+		printf("TIME LIMIT CROSSED!\n");
+		game.waiting_on_turn = false;
 	}
 }
 
@@ -312,6 +332,7 @@ static void poll_sessions(){
 	active_games.for_each([](auto& pair){
 			auto& game = pair.value;
 			auto& session = *game.session;
+			//print_game(game);
 			do_turn(session, game);
 		});
 }
