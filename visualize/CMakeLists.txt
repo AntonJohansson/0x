@@ -17,10 +17,14 @@ target_compile_options(${PROJECT} PRIVATE
 	)
 
 include_directories(${SFML_INCLUDE_DIR})
-# unix
-#target_link_libraries(${PROJECT}
-#	sfml-graphics sfml-window sfml-system pthread
-#	)
-# mac
-target_link_libraries(${PROJECT} ${SFML_LIBRARIES} pthread)
+
+if(UNIX AND NOT APPLE)
+	# unix
+	target_link_libraries(${PROJECT}
+		sfml-graphics sfml-window sfml-system pthread
+		)
+elseif(APPLE)
+	# mac
+	target_link_libraries(${PROJECT} ${SFML_LIBRARIES} pthread)
+endif()
 
