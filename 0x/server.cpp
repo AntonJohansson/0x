@@ -148,14 +148,13 @@ void receive_client_data(int s){
 			if(game::active_sessions.size()){
 				BinaryData data;
 
-				encode::u8(data, 1);
-
 				game::active_sessions.for_each([&](auto& pair){
 						auto& session = pair.value;
 						encode::string(data, session.name);
 						});
 
-				encode_frame_length(data);
+				encode_packet(data, PacketType::SESSION_LIST);
+				printf("session list data size %zu\n", data.size());
 				tcp_socket::send_all(s, &data[0], data.size());
 			}
 		}else{
@@ -168,7 +167,7 @@ void receive_client_data(int s){
 			if(packet_id == 3){
 				int res, q0, r0, q1, r1;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
-				printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
+				//printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
 
 				if(auto game_found = game::active_games.at(connection.session_info.name)){
 					auto& game = *game_found;

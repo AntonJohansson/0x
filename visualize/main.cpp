@@ -17,6 +17,7 @@
 #include "tcp/socket_connection.hpp"
 #include "io/poll_set.hpp"
 #include "network/binary_encoding.hpp"
+#include "../0x/crc/crc32.hpp"
 
 constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
@@ -115,7 +116,6 @@ void input_loop(PollSet& set){
 
 void receive_data(int s){
 	Socket socket(s, "0.0.0.0");
-	printf("received data!\n");
 
 	// Receive all data
 	std::string total_data;
@@ -129,24 +129,38 @@ void receive_data(int s){
 
 
 	BinaryData data(total_data.begin(), total_data.end());
-	printf("received data of size %lu\n", data.size());
+	//printf("received data of size %lu\n", data.size());
 
 	// handle packet
 	while(!data.empty()){
 		uint32_t total_data_size = data.size();
 		uint32_t packet_size;
+		
+		// DECODE PACKET ID
 		decode::integer(data, packet_size);
-		printf("handling packet of size: %u\n", packet_size);
 
 		assert(packet_size <= data.size());
 
+		// DECODE PACKET TYPE
 		uint8_t packet_type = 0;
 		decode::integer(data, packet_type);
+
+		// DECODE CRC
+		uint32_t crc = 0;
+		decode::integer(data, crc);
+
+		printf("total data size received: %u\nheader:\n\tpacket_size: %u\n\tpacket_id: %u\n", total_data_size, packet_size, packet_type);
+
+		uint32_t payload_crc = buffer_crc32(data.data(), packet_size);
+		if(crc != payload_crc){
+			printf("CRC mismatch (%x != %0x)!\n", crc, payload_crc);
+		}
 
 		if(packet_type == 1){ // LIST
 			std::string session_name, text_string;
 			sessions.clear();
-			while(data.size() > total_data_size - packet_size){
+			uint32_t data_left_size = data.size() - packet_size;
+			while(data.size() > data_left_size){
 				session_name = decode::string(data);
 				sessions.push_back(session_name);
 				text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
@@ -155,7 +169,7 @@ void receive_data(int s){
 		}else if(packet_type == 2){ // MAP
 			int radius, players, current_turn;
 			decode::multiple_integers(data, radius, players, current_turn);
-			printf("radius: %i, players: %i, current_turn: %i\n", radius, players);
+			//printf("radius: %i, players: %i, current_turn: %i\n", radius, players);
 
 			std::string text = "Current turn: " + std::to_string(current_turn) + "\n";
 
@@ -178,7 +192,7 @@ void receive_data(int s){
 				int player_id;
 				int resources;
 				decode::multiple_integers(data, q, r, player_id, resources);
-				printf("%i, %i, %i, %i\n", q, r, player_id, resources);
+				//printf("%i, %i, %i, %i\n", q, r, player_id, resources);
 				auto& h = temp_map.at(q, r);
 				h.q = q;
 				h.r = r;

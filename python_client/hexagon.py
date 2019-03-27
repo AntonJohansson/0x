@@ -1,3 +1,4 @@
+from crc32 import buffer_crc32
 import socket
 import struct
 
@@ -64,7 +65,15 @@ class hexagon_bot:
         packet_id_data = self.server.recv(1)
         packet_id = struct.unpack('>B', packet_id_data)[0]
 
+        # crc
+        crc_data = self.server.recv(4)
+        crc = struct.unpack('>I', crc_data)[0]
+
         data = self.server.recv(packet_size)
+
+        payload_crc = buffer_crc32(data, packet_size)
+        if crc != payload_crc:
+            print("CRC mismatch ({:04x} != {:04x})!".format(crc,payload_crc % 2**32))
 
         if packet_id == INVALID:
             print('Invalid packet, server (or network) error')

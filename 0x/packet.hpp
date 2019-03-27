@@ -1,6 +1,7 @@
 #pragma once
 
 #include "network/binary_encoding.hpp"
+#include "crc/crc32.hpp"
 #include <assert.h>
 #include <stdio.h>
 
@@ -51,6 +52,11 @@ inline void encode_packet(BinaryData& data, PacketType type){
 
 	// Encode packet id 
 	encode::u8(temp, type);
+
+	// Encode payload crc
+	auto crc = buffer_crc32(data.data(), data.size());
+	encode::u32(temp, crc);
+	//printf("encoding CRC: %x\n", crc);
 
 	append(temp, data);
 	data = temp;

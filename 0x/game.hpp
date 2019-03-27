@@ -190,12 +190,11 @@ static void send_observer_data(std::vector<int> observers, Session& session){
 		auto& game = *game_found;
 
 		BinaryData data;
-		encode::u8(data, 2);
 
 		serialize_game_state(data, game);
 		//printf("sending observer data of size: %lu\n", data.size());
 
-		encode_frame_length(data);
+		encode_packet(data, PacketType::OBSERVER_MAP);
 
 		for(auto& s : observers){
 			tcp_socket::send_all(s, &data[0], data.size());

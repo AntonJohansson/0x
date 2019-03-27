@@ -7,7 +7,7 @@ class random_bot(hexagon_bot):
         transfer_from   = randint(0,len(map)-1)
         transfer_to     = randint(0,5)
         transfer_amount = randint(1,map[transfer_from][0][3])
-        print(transfer_from)
+        #print(transfer_from)
 
         q0 = map[transfer_from][0][0]
         r0 = map[transfer_from][0][1]
