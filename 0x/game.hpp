@@ -207,7 +207,7 @@ static void start_game(Session& session){
 
 	game.player_scores = new int[session.max_players];
 
-	game.map = map_allocator.alloc(5, session.players);
+	game.map = map_allocator.alloc(3, session.players);
 	game.session = &session;
 
 	if(session.observers > 0){
@@ -268,7 +268,10 @@ static void do_turn(Session& session, Game& game){
 						for(auto& n : hex::axial_neighbours({cell.q, cell.r})){
 							auto n_cell = hex_map::at(*game.map, n);
 							//printf("%i, %i\n", n_cell.q, n_cell.r);
-							encode::multiple_integers(data, n_cell.q, n_cell.r, static_cast<int>(n_cell.player_id == cell.player_id), n_cell.resources);
+							int id = 0;
+							if(n_cell.player_id == cell.player_id){id = 1;}
+							else if(n_cell.player_id != -1){id = 2;}
+							encode::multiple_integers(data, n_cell.q, n_cell.r, id, n_cell.resources);
 						}
 						//printf("--------\n");
 					}
@@ -311,9 +314,9 @@ static void do_turn(Session& session, Game& game){
 					});
 		}
 	}else if(dur > std::chrono::milliseconds(300)){
-		//BinaryData data;
-		//encode_error_message(data, "time limit crossed!");
-		//tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
+		BinaryData data;
+		encode_error_message(data, "time limit crossed!");
+		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
 
 		//game.waiting_on_turn = false;
 	}

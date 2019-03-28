@@ -1,6 +1,6 @@
 #!/bin/bash
 
-n=5
+n=6
 
 termite -e "./build/0x/0x"&
 sleep 0.1

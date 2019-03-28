@@ -12,7 +12,7 @@ class random_bot(hexagon_bot):
             c0 = map[transfer_from][0]
             #print(c0)
             for n in map[transfer_from][1]:
-                if(n[2] == 0):
+                if(n[2] == 0 or n[2] == 2):
                     chosen_n = n
                     break
 
