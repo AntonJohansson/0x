@@ -27,7 +27,7 @@ struct PlayerMap{
 };
 
 struct Command{
-	std::vector<std::string_view> words;
+	std::string data;
 };
 
 struct TurnTransaction{
@@ -36,8 +36,14 @@ struct TurnTransaction{
 	int q1 = 0, r1 = 0;
 };
 
-union PacketUnion{
+struct PacketUnion{
 	PacketType type = PacketType::INVALID;
+	union{
+		SessionList session_list;
+		ObserverMap observer_map;
+		PlayerMap 	player_map;
+		Command 		command;
+	};
 };
 
 inline void encode_packet(BinaryData& data, PacketType type){
@@ -69,11 +75,15 @@ inline PacketUnion decode_packet(BinaryData& data){
 	uint8_t packet_type;
 	decode::multiple_integers(data, size);
 
-	switch(static_cast<PacketType>(packet_type)){
+	//PacketUnion result = {};
+	auto type = static_cast<PacketType>(packet_type);
+
+	switch(type){
 			case PacketType::SESSION_LIST:
 			case PacketType::OBSERVER_MAP:
 			case PacketType::PLAYER_MAP:
 			case PacketType::COMMAND:
+				//result.command = {std::string(data.begin(), data.begin() + size)};
 			case PacketType::TURN_TRANSACTION:
 			default:
 				printf("Unrecognized packet type %i!\n", packet_type);

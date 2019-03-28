@@ -76,6 +76,8 @@ extern std::vector<CompleteTurnData> complete_turn_data;
 
 
 static void send_observer_data(std::vector<int> observers, Session& session);
+static void start_game(Session& session);
+static void do_turn(Session& session, Game& game);
 
 
 
@@ -99,13 +101,21 @@ static void print_game(Game& game){
 }
 
 static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const std::string& name, int max_players){
-	std::cout << active_sessions.size() << std::endl;
-	//printf("Entering create_or_join\n");
 	if(auto session_found = active_sessions.at(name)){
 		auto& session = *session_found;
 		if(mode == PLAYER && session.players < session.max_players){
 			session.player_handles.push_back(socket_handle);
 			session.players++;
+
+			if(session.players == session.max_players){
+				session.game_in_progress = true;
+				start_game(session);
+
+				if(auto game_found = active_games.at(session.name); game_found){
+					auto& game = *game_found;
+					do_turn(session, game);
+				}
+			}
 		}else if(mode == OBSERVER){
 			session.observer_handles.push_back(socket_handle);
 			session.observers++;
@@ -316,8 +326,8 @@ static void do_turn(Session& session, Game& game){
 	}else if(dur > std::chrono::milliseconds(300)){
 		BinaryData data;
 		encode_error_message(data, "time limit crossed!");
-		//tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
-		//game.waiting_on_turn = false;
+		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
+		game.waiting_on_turn = false;
 	}
 }
 

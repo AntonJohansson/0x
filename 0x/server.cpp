@@ -38,7 +38,7 @@ void start(){
 	
 	set.add(server_socket, accept_client_connections);
 
-	server_thread = std::thread(poll_fds);
+	//server_thread = std::thread(poll_fds);
 }
 
 void close(){
@@ -108,21 +108,14 @@ void on_client_disconnect(int s){
 	tcp_socket::close(s);
 }
 
+static void handle_server_commands(){
+}
+
 void receive_client_data(int s){
 	static unsigned char buffer[1024];
 	auto bytes_received = tcp_socket::recv(s, buffer, 1024);
 	std::string_view sv(reinterpret_cast<char*>(buffer), bytes_received);
-	// Receive all data
-	//std::string total_data;
-	//std::string incoming_data;
-	//while(true){
-	//	incoming_data = tcp_socket::recv(s, buffer, 1024);
-	//	if(incoming_data.empty()) break;
 
-	//	total_data += incoming_data;
-	//}
-
-	//printf("%lu bytes received\n", bytes_received);
 	if(auto connection_opt = connections.at(s)){
 		auto& connection = *connection_opt;
 
@@ -162,25 +155,22 @@ void receive_client_data(int s){
 			BinaryData data(buffer, buffer + bytes_received);
 			decode::integer(data, packet_id);
 
-			//printf("packet id: %i\n", static_cast<int>(packet_id));
-
 			if(packet_id == 3){
 				int res, q0, r0, q1, r1;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
-				//printf("transferring %i from (%i,%i) to (%i,%i)\n", res, q0,r0, q1,r1);
 
 				if(auto game_found = game::active_games.at(connection.session_info.name)){
 					auto& game = *game_found;
 
-					game::complete_turn_data.push_back({&game, res, q0, r0, q1, r1});
-					//game::complete_turn(game, res, q0, r0, q1, r1);
+					game::complete_turn(game, res, q0, r0, q1, r1);
+					if(auto session_found = game::active_sessions.at(connection.session_info.name); session_found){
+						auto& session = *session_found;
+						game::do_turn(session, game);
+					}
 				}
 			}
 		}
 	}
-
-	//printf("Received data: %s\n", total_data.c_str());
-	//socket.send_all(total_data);
 }
 
 

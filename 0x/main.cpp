@@ -2,7 +2,6 @@
 #include "game.hpp"
 #include <chrono>
 #include <thread>
-#include <iostream>
 
 // TODO:
 //	- collect game statistics
@@ -22,20 +21,21 @@ int main(){
 	//		});
 
 	server::start();
+	server::poll_fds();
 
-	while(server::is_running()){
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		game::poll_sessions();
+	//while(server::is_running()){
+	//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	//	game::poll_sessions();
 
-		// at start of new game send inital board to observers
+	//	// at start of new game send inital board to observers
 
-		// each round:
-		// 	receive transactions
-		// 	ready to start?
-		// 	filter transactions
-		// 	send transactions to observers so that they can be animated
-		// 	apply transactions to map
-	}
+	//	// each round:
+	//	// 	receive transactions
+	//	// 	ready to start?
+	//	// 	filter transactions
+	//	// 	send transactions to observers so that they can be animated
+	//	// 	apply transactions to map
+	//}
 
 	server::close();
 }
