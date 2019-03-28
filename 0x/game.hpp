@@ -316,8 +316,7 @@ static void do_turn(Session& session, Game& game){
 	}else if(dur > std::chrono::milliseconds(300)){
 		BinaryData data;
 		encode_error_message(data, "time limit crossed!");
-		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
-
+		//tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
 		//game.waiting_on_turn = false;
 	}
 }

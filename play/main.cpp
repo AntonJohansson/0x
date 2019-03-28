@@ -112,7 +112,8 @@ void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Co
 	window.draw(&vertices[0], 8, sf::TriangleFan);
 }
 
-void draw_cell(sf::RenderWindow& window, int q, int r, int  resources, int player_id){
+void draw_cell(sf::RenderWindow& window, int q, int r, int  resources, int player_id, sf::Color color, sf::Color text_color){
+	text.setFillColor(text_color);
 
 	auto [x, y] = axial::to_screen(q,r);
 	x *= 1.05f;
@@ -121,25 +122,7 @@ void draw_cell(sf::RenderWindow& window, int q, int r, int  resources, int playe
 	y += SCREEN_HEIGHT/2.0f;
 	y = SCREEN_HEIGHT - y;
 
-	if(player_id > 0){
-		int players = 2;
-		auto [r,g,b] = hsl_to_rgb({player_id*360.0f/players, 0.5f, 0.2f + fmin((float)resources, 0.6f*300.0f)/300.0f});
-		auto color = sf::Color(255*r, 255*g, 255*b);
-		//auto color = sf::Color(
-		//	0.5f*(.player_id+1)*255/(map.players),
-		//	0.5f*(cell.player_id+2)*255/(map.players),
-		//	0.5f*(cell.player_id+3)*255/(map.players));
-		draw_hexagon(window, hex_size, x, y, color);
-	} else{
-		draw_hexagon(window, hex_size, x, y, sf::Color(47,47,47));
-	}
-
-	if(q == m0.x && r == m0.y){
-		draw_hexagon(window, hex_size, x, y, sf::Color(123, 47, 47));
-	}
-	if(doing_transfer && q == m1.x && r == m1.y){
-		draw_hexagon(window, hex_size, x, y, sf::Color(47, 123, 47));
-	}
+	draw_hexagon(window, hex_size, x, y, color);
 
 	// Debug draw text
 	if(toggle_hex_positions){
@@ -459,11 +442,60 @@ int main(){
 			// especially since it's being called in a tight loop
 			for(auto& cell : map){
 				auto& [q,r,resources,player_id, neighbours] = cell;
-				draw_cell(window, q, r, resources, player_id);
+				static sf::Color dark_color{47,47,47};
+				static sf::Color background_color{244,240,219};
 
+				sf::Color color = dark_color;
+				sf::Color	text = background_color;
+				if(player_id > 0){
+					int players = 2;
+					float l = 0.2f + fmin((float)resources, 0.6f*300.0f)/300.0f;
+					if(l > 0.5f){
+						text = dark_color;
+					}
+
+					auto [r,g,b] = hsl_to_rgb({player_id*360.0f/players, 0.5f, l});
+					color = sf::Color(255*r, 255*g, 255*b);
+				}
+
+				if(q == m0.x && r == m0.y){
+					color = sf::Color(123,47,47);
+				}
+				if(doing_transfer && q == m1.x && r == m1.y){
+					color = sf::Color(47,123,47);
+				}
+
+
+				draw_cell(window, q, r, resources, player_id, color, text);
+
+				//printf("-----\n");
 				for(auto& n : neighbours){
-					auto& [q,r,resources,player_id] = n;
-					draw_cell(window, q, r, resources, player_id);
+					color = dark_color;
+					text = background_color;
+
+					if(n.player_id > 0){
+						int players = 2;
+						float l = 0.2f + fmin((float)n.resources, 0.6f*300.0f)/300.0f;
+						if(l > 0.5f){
+							text = dark_color;
+						}
+
+						auto [r,g,b] = hsl_to_rgb({n.player_id*360.0f/players, 0.5f, l});
+						color = sf::Color(255*r, 255*g, 255*b);
+					}
+					if(n.q == m0.x && n.r == m0.y){
+						color = sf::Color(123,47,47);
+					}
+					if(doing_transfer && n.q == m1.x && n.r == m1.y){
+						color = sf::Color(47,123,47);
+					}
+
+					if((!doing_transfer && q == m0.x && r == m0.y) || (doing_transfer && q == m1.x && r == m1.y)){
+						color = sf::Color(47,47,123);
+						//printf("%i,%i\n", n.q , n.r);
+					}
+
+					draw_cell(window, n.q, n.r, n.resources, n.player_id, color, text);
 				}
 			}
 		}

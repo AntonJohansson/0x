@@ -1,12 +1,15 @@
 #!/bin/bash
 
-n=6
+n=5
+s=6
 
 termite -e "./build/0x/0x"&
 sleep 0.1
+
 for i in $(seq 1 $n); do
-	termite -e "python python_client/client.py coj p hej $n"&
+	termite -e "python python_client/client.py coj p hej $s"&
 done
+termite -e "python python_client/snake.py coj p hej $s"&
 #for i in $(seq 1 $n); do
 #	termite -e "python python_client/client.py coj p test $n"&
 #done
