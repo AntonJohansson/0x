@@ -222,7 +222,8 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 	if(amount <= cell0.resources){
 		cell0.resources -= amount;
 	}else{
-		printf("invalid transaction: (%i,%i) has %i, trying to transfer %i\n", q0,r0,cell0,amount);
+		printf("invalid transaction: (%i,%i) has %i, trying to transfer %i\n", q0,r0,cell0.resources,amount);
+		game.waiting_on_turn = false;
 		return;
 	}
 	
@@ -281,15 +282,15 @@ static void do_turn(Session& session, Game& game){
 			}
 		}
 
-		if(players_left == 1){
-			// game has ended, we have a winner
-			printf("active_games.size(): %i\nmap_allocator.size(): %i\n", active_games.size(), map_allocator.size());
-			session.game_in_progress = false;
-			delete[] game.player_scores;
-			map_allocator.dealloc(game.map);
-			active_games.erase(session.name);
-			return;
-		}
+		//if(players_left == 1){
+		//	// game has ended, we have a winner
+		//	printf("active_games.size(): %i\nmap_allocator.size(): %i\n", active_games.size(), map_allocator.size());
+		//	session.game_in_progress = false;
+		//	delete[] game.player_scores;
+		//	map_allocator.dealloc(game.map);
+		//	active_games.erase(session.name);
+		//	return;
+		//}
 
 		// this should be fine for trolling
 		if(game.player_scores[game.current_player_turn] > 0){
@@ -310,11 +311,11 @@ static void do_turn(Session& session, Game& game){
 					});
 		}
 	}else if(dur > std::chrono::milliseconds(300)){
-		BinaryData data;
-		encode_error_message(data, "time limit crossed!");
-		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
+		//BinaryData data;
+		//encode_error_message(data, "time limit crossed!");
+		//tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
 
-		game.waiting_on_turn = false;
+		//game.waiting_on_turn = false;
 	}
 }
 

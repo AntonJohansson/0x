@@ -14,6 +14,7 @@ ERROR_MESSAGE       = 6
 class hexagon_bot:
     def __init__(self):
         self.server = socket.socket()
+        self.last_packet_info = ""
 
     def unpack_hex(self, data, index):
         q, r, player, res = struct.unpack_from('>4i', data, index)
@@ -77,12 +78,12 @@ class hexagon_bot:
 
         if packet_id == INVALID:
             print('Invalid packet, server (or network) error')
-        elif PLAYER_MAP:
+        elif packet_id == PLAYER_MAP:
             map = self.interpret_turn_data(data)
             self.handle_turn_data(map)
-        elif ERROR_MESSAGE:
+        elif packet_id == ERROR_MESSAGE:
             length = struct.unpack_from('>I', data)[0]
             string = struct.unpack_from('>'+str(length)+'s', data, 4)[0]
-            print("Error: " + str(string))
+            print("Error: " + string.decode('utf8'))
         else:
             print('Unknown packet id {}'.format(packet_id))

@@ -110,6 +110,19 @@ inline void for_each(HexMap& map, std::function<void(HexCell&)> func){
 	}
 }
 
+inline void for_each2(HexMap& map, std::function<void(int q, int r,HexCell&)> func){
+	for (int q = -map.radius; q <= map.radius; q++){
+		int r1 = std::max(-map.radius, q - map.radius);
+		int r2 = std::min( map.radius, q + map.radius);
+		for (int r = r1; r <= r2; r++){
+			// TODO: this is bad
+			auto& cell = map.storage[index(map, {q,r})];
+
+			func(q, r, cell);
+		}
+	}
+}
+
 
 }
 

@@ -156,10 +156,10 @@ void receive_data(int s){
 			printf("CRC mismatch (%x != %0x)!\n", crc, payload_crc);
 		}
 
+		uint32_t data_left_size = data.size() - packet_size;
 		if(packet_type == 1){ // LIST
 			std::string session_name, text_string;
 			sessions.clear();
-			uint32_t data_left_size = data.size() - packet_size;
 			while(data.size() > data_left_size){
 				session_name = decode::string(data);
 				sessions.push_back(session_name);
@@ -186,7 +186,7 @@ void receive_data(int s){
 			temp_map.players = players;
 			temp_map.generate_storage(radius);
 
-			while(data.size() > total_data_size - packet_size){
+			while(data.size() > data_left_size){
 				int q;
 				int r;
 				int player_id;

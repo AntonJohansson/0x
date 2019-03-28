@@ -12,7 +12,7 @@ void serialize_game_state(BinaryData& data, game::Game& game){
 	}
 
 	// encode actual map
-	hex_map::for_each(map, [&](HexCell& cell){
+	hex_map::for_each2(map, [&](int q, int r, HexCell& cell){
 				encode::multiple_integers(data, cell.q, cell.r, cell.player_id, cell.resources);
-			});
+				});
 }

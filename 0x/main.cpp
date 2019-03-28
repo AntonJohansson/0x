@@ -2,6 +2,7 @@
 #include "game.hpp"
 #include <chrono>
 #include <thread>
+#include <iostream>
 
 // TODO:
 //	- collect game statistics
@@ -23,6 +24,8 @@ int main(){
 	server::start();
 
 	while(server::is_running()){
+		//char c;
+		//std::cin >> c;
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		game::poll_sessions();
 
