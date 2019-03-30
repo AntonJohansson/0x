@@ -14,7 +14,7 @@ class random_bot(hexagon_bot):
                     self.submit_transaction(round(c0[3]/2), c0[0], c0[1], n[0], n[1])
                     return
 
-        print("didnt find one :(")
+        #print("didnt find one :(")
         transfer_from   = randint(0,len(map)-1)
         transfer_to     = randint(0,5)
         transfer_amount = randint(1,map[transfer_from][0][3])

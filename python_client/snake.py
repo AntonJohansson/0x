@@ -22,8 +22,8 @@ class random_bot(hexagon_bot):
 
     def handle_turn_data(self, map):
         head, head_neighbours = hex_max(map)
-        print("head resources: {}".format(head[3]))
-        print("done_list size: {}".format(len(self.done_list)))
+        #print("head resources: {}".format(head[3]))
+        #print("done_list size: {}".format(len(self.done_list)))
 
         for cell,neighbours in map:
             if not find_in_list(cell, self.done_list) and (cell != head):

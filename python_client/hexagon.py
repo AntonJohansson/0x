@@ -56,6 +56,7 @@ class hexagon_bot:
         print('You forgot to override handle_turn_data(...)')
 
     def receive_data(self):
+        print("begin");
         # packet_size is 4 bytes
         # packet_size only concerns actual payload and not 
         # the packet id. This might be bad practice or something idunno
@@ -81,6 +82,7 @@ class hexagon_bot:
         elif packet_id == PLAYER_MAP:
             map = self.interpret_turn_data(data)
             self.handle_turn_data(map)
+            print("end");
         elif packet_id == ERROR_MESSAGE:
             length = struct.unpack_from('>I', data)[0]
             string = struct.unpack_from('>'+str(length)+'s', data, 4)[0]

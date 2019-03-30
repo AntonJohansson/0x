@@ -54,6 +54,7 @@ struct Game{
 	std::chrono::high_resolution_clock::time_point begin_turn_time_point;
 
 	int* player_scores = nullptr;
+	int* number_of_tiles = nullptr;
 	Session* session = nullptr;
 	HexMap* map = nullptr;
 };
@@ -87,17 +88,11 @@ static void do_turn(Session& session, Game& game);
 
 
 static void print_session(Session& session){
-	printf("%s:\n\tobservers: %i\n\tplayers %i/%i\n", session.name.c_str(), session.observers, session.players, session.max_players);
+	printf("session %s\t(observers: %i, players: %i/%i)\n", session.name.c_str(), session.observers, session.players, session.max_players);
 }
 
 static void print_game(Game& game){
-	// bool waiting_on_turn = false;
-	// int current_turn = 0;
-	// int current_player_turn = 0;
-	// int* player_scores = nullptr;
-	// Session* session = nullptr;
-	// HexMap* map = nullptr;
-	printf("Game: %s\n\tcurrent_turn: %i\n\tcurrent_player_turn: %i\n", game.session->name.c_str(), game.current_turn, game.current_player_turn);
+	printf("game: %s\t(turn: %i, player: %i, waiting: %i)\n", game.session->name.c_str(), game.current_turn, game.current_player_turn, game.waiting_on_turn);
 }
 
 static SessionInfo create_or_join_session(int socket_handle, PlayerMode& mode, const std::string& name, int max_players){
@@ -217,6 +212,11 @@ static void start_game(Session& session){
 
 	game.player_scores = new int[session.max_players];
 
+	game.number_of_tiles = new int[session.max_players];
+	for(int i = 0; i < session.max_players; i++){
+		game.number_of_tiles[i] = 1;
+	}
+
 	game.map = map_allocator.alloc(3, session.players);
 	game.session = &session;
 
@@ -224,6 +224,9 @@ static void start_game(Session& session){
 		send_observer_data(session.observer_handles, session);
 	}
 }
+
+//void end_turn(Session& session, Game& game){
+//}
 
 static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1){
 	auto& cell0 = hex_map::at(*game.map, {q0, r0});
@@ -241,6 +244,8 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 		if(cell1.resources < amount){
 			cell1.resources = amount - cell1.resources;
 			cell1.player_id = cell0.player_id;
+			game.number_of_tiles[cell0.player_id]++;
+			game.number_of_tiles[cell1.player_id]--;
 		}
 	}else{
 		cell1.resources += amount;
@@ -248,31 +253,37 @@ static void complete_turn(Game& game, int amount, int q0, int r0, int q1, int r1
 
 	if(cell0.resources == 0){
 		cell0.player_id = -1;
+		game.number_of_tiles[cell0.player_id]--;
 	}
 
 	game.waiting_on_turn = false;
 }
 
 static void do_turn(Session& session, Game& game){
-	//std::cout << "waiting on turn: " << game.waiting_on_turn << "\n";
-	//for(int i = 0; i < session.max_players; i++){
-	//	std::cout << game.player_scores[i] << "\n";
-	//}
+	print_game(game);
+
 	auto dur = std::chrono::high_resolution_clock::now() - game.begin_turn_time_point;
+
+	while(game.number_of_tiles[game.current_player_turn] == 0){
+		game.current_player_turn++;
+	}
 
 	if(!game.waiting_on_turn){
 		game.begin_turn_time_point = std::chrono::high_resolution_clock::now();
 
 		game.current_turn++;
+
+		printf("--- sending observer data\n");
 		send_observer_data(session.observer_handles, session);
 
+		printf("--- constructing player data\n");
 		BinaryData data;
 		// TODO: rebuilding map for every player, might not be necessary
 		// only need to track changes
 		game.player_scores[game.current_player_turn] = 0;
 		hex_map::for_each(*game.map, [&](HexCell& cell){
 					if(cell.player_id == game.current_player_turn){
-						game.player_scores[game.current_player_turn] += cell.resources;
+						//game.player_scores[game.current_player_turn] += cell.resources;
 						encode::multiple_integers(data, cell.q, cell.r, 1, cell.resources);
 						//printf("%i, %i\n--------\n", cell.q, cell.r);
 						for(auto& n : hex::axial_neighbours({cell.q, cell.r})){
@@ -287,13 +298,14 @@ static void do_turn(Session& session, Game& game){
 					}
 				});
 
+		printf("--- checking players left\n");
 		// Check players left in game
-		int players_left = 0;
-		for(int i = 0; i < session.max_players; i++){
-			if(game.player_scores[i] > 0){
-				players_left++;
-			}
-		}
+		//int players_left = 0;
+		//for(int i = 0; i < session.max_players; i++){
+		//	if(game.player_scores[i] > 0){
+		//		players_left++;
+		//	}
+		//}
 
 		//if(players_left == 1){
 		//	// game has ended, we have a winner
@@ -306,15 +318,17 @@ static void do_turn(Session& session, Game& game){
 		//}
 
 		// this should be fine for trolling
-		if(game.player_scores[game.current_player_turn] > 0){
+		if(true || game.player_scores[game.current_player_turn] > 0){
 			//encode_frame_length(data);
 			encode_packet(data, PacketType::PLAYER_MAP);
 			//printf("sending player data of size %lu\n", data.size());
+			printf("--- sending player data\n");
 			tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
-			game.waiting_on_turn = true;
+			//game.waiting_on_turn = true;
 		}
 
 		// END ROUND
+		printf("--- end of round\n");
 		if(++game.current_player_turn >= session.max_players){
 			game.current_player_turn -= session.max_players;
 			hex_map::for_each(*game.map, [&](auto& cell){
@@ -327,7 +341,7 @@ static void do_turn(Session& session, Game& game){
 		BinaryData data;
 		encode_error_message(data, "time limit crossed!");
 		tcp_socket::send_all(session.player_handles[game.current_player_turn], &data[0], data.size());
-		game.waiting_on_turn = false;
+		//game.waiting_on_turn = false;
 	}
 }
 
@@ -355,7 +369,25 @@ static void poll_sessions(){
 		});
 }
 
-struct PlayerData{
-};
+//
+// 
+// 	 new round:
+// 	 	round++
+//
+// 	 for all players:
+// 	 	- send out player data
+// 	 	- wait for transaction commit
+// 	 	  - if valid:
+// 	 	    commit and send out to observers
+//
+// 	 end round:
+// 	 	update all owned hexes by +1
+// 	 		send out new +1 data to observers
+//
+//
+//
+
+
+
 
 }
