@@ -6,6 +6,66 @@
 #include <assert.h>
 #include <stdio.h>
 
+
+/*
+ *  Packets from the server have the following structure
+ *  	+---------------------+---------------+----------+-------------
+ *  	| payload_length: u32 | packet_id: u8 | crc: u32 | payload ...
+ *  	+---------------------+---------------+----------+-------------
+ *
+ *  	A "hex" consists of
+ *  		+--------+--------+------------+----------------+
+ *  		| q: i32 | r: i32 | owner: i32 | resources: u32 |
+ *  		+--------+--------+------------+----------------+
+ *
+ *  	where the payload is
+ *  		ERROR_MESSAGE:
+ *  			--------------------+-------------+
+ *  			 string length: u32 | string data |
+ *  			--------------------+-------------+
+ *
+ *  		OBSERVER_MAP:
+ *  			----------+---------------+-----+-----+-----+
+ *  			 map info | player scores | hex | ... | hex |
+ *  			----------+---------------+-----+-----+-----+
+ *
+ *  			where "map info" 
+ *  				-----------------+-------------------+-------------------+-----
+ *  				 map radius: u32 | player count: u32 | current turn: u32 | ...
+ *  				-----------------+-------------------+-------------------+-----
+ *  			and "player scores" is
+ *  				+----------------+----------------+-----+----------------+----------------+
+ *  				| client id: u32 | resources: u32 | ... | client_id: u32 | resources: u32 |
+ *  				+----------------+----------------+-----+---------------------------------+
+ *  				|____________player data__________|                                       |
+ *  				|_______________________repeated "player count" times_____________________|
+ *
+ *  		PLAYER_MAP:
+ *  			where the whole map consists of
+ *  				-----+-----+-----+-----------
+ *  				 hex | hex | ... | hex | ...
+ *  				-----+-----+-----+-----------
+ *  				| 	 |__6 neighbours___|
+ *          |_repeated for every___|
+ *            player hex
+ *
+ * 	Packets to the server have to following structure
+ * 		+---------------+---------------+------------
+ * 		| packet_id: u8 | lobby_id: u64 | payload...
+ * 		+---------------+---------------+------------
+ *
+ * 		where lobby_id is not included for COMMANDs.
+ *
+ * 	SESSION_LIST:
+ * 	OBSERVER_MAP:
+ * 	PLAYER_MAP:
+ *
+ *
+ *
+ *
+ *
+ */
+
 enum class PacketType{
 	INVALID = 0,
 	// output

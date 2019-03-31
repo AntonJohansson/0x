@@ -6,9 +6,9 @@
 #include <assert.h>
 
 struct HexCell{
-	int q = 0, r = 0;
-	int resources = 0;
-	int player_id = -1;
+	int32_t q = 0, r = 0;
+	uint32_t resources = 0;
+	int32_t player_id = -1;
 };
 
 struct HexMap;

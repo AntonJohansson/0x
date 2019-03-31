@@ -10,6 +10,8 @@
 #include "network/serialize_data.hpp"
 #include "packet.hpp"
 
+#include "hex_map.hpp"
+
 #include <stdio.h>
 #include <thread>
 #include <string>
@@ -30,6 +32,21 @@ namespace{
 	};
 
 	HashMap<int, Connection> connections;
+}
+
+static void player_data_callback(game::ClientId client_id, std::vector<game::HexPlayerData> player_map){
+	BinaryData data;
+	for(auto& [hex, neighbours] : player_map){
+		encode::multiple_integers(data, hex->q, hex->r, static_cast<uint32_t>(1), hex->resources);
+		for(auto& n : neighbours){
+			int id = 0;
+			if(n->player_id == hex->player_id){id = 1;}
+			else if(n->player_id != -1){id = 2;}
+			encode::multiple_integers(data, n->q, n->r, static_cast<uint32_t>(id), n->resources);
+		}
+	}
+
+	tcp_socket::send_all(client_id, data.data(), data.size());
 }
 
 static void error_message_callback(game::ClientId client_id, const std::string& message){
@@ -53,6 +70,7 @@ void start(){
 	
 	set.add(server_socket, accept_client_connections);
 
+	game::set_player_data_callback(player_data_callback);
 	game::set_error_callback(error_message_callback);
 	game::set_connected_to_lobby_callback(connected_to_lobby_callback);
 
@@ -163,6 +181,14 @@ void receive_client_data(int s){
 						});
 			}
 		}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
+			BinaryData data;
+			for(auto& lobby : game::get_lobby_list()){
+				encode::string(data, lobby);
+			}
+
+			encode_packet(data, PacketType::SESSION_LIST);
+			tcp_socket::send_all(s, data.data(), data.size());
+
 			//if(game::active_sessions.size()){
 			//	BinaryData data;
 
@@ -176,13 +202,20 @@ void receive_client_data(int s){
 			//	tcp_socket::send_all(s, &data[0], data.size());
 			//}
 		}else{
+			// transactions
 			uint8_t packet_id = 0;
 			BinaryData data(buffer, buffer + bytes_received);
 			decode::integer(data, packet_id);
 
+			uint64_t lobby_id;
+			decode::integer(data, lobby_id);
+
 			if(packet_id == 3){
-				int res, q0, r0, q1, r1;
+				int32_t q0, r0, q1, r1;
+				uint32_t res;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
+
+				game::commit_player_turn(lobby_id, res, q0, r0, q1, r1);
 
 				//if(auto game_found = game::active_games.at(connection.session_info.name)){
 				//	auto& game = *game_found;

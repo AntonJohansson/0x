@@ -2,6 +2,10 @@
 
 #include <stdint.h>
 #include <string>
+#include <array>
+#include <vector>
+
+struct HexCell;
 
 namespace game{
 
@@ -24,8 +28,9 @@ using ClientId = uint32_t;
 // Interfact to queue game requests
 //
 
+extern std::vector<std::string> get_lobby_list();
 extern void create_or_join_lobby(ClientId client_id, PlayerMode mode, Settings settings);
-extern void commit_player_turn(LobbyId lobby_id, uint32_t amount, uint32_t q0, uint32_t r0, uint32_t q1, uint32_t r1);
+extern void commit_player_turn(LobbyId lobby_id, uint32_t amount, int32_t q0, int32_t r0, int32_t q1, int32_t r1);
 
 extern void poll();
 
@@ -35,6 +40,12 @@ extern void poll();
 // 
 //
 
+
+struct HexPlayerData{
+	const HexCell* hex;
+	std::array<const HexCell*, 6> neighbours;
+};
+
 using ErrorCallbackFunc = void(*)(ClientId, const std::string&);
 using ObserverDataCallbackFunc = void(*)(ClientId, 
 		uint32_t map_radius, 
@@ -43,14 +54,15 @@ using ObserverDataCallbackFunc = void(*)(ClientId,
 		// player scores
 		// data in the form of (q,r,id,amount)
 		);
-using PlayerDataCallbackFunc = void(*)(ClientId
+using PlayerDataCallbackFunc = void(*)(ClientId,
+		std::vector<HexPlayerData> player_map
 		// data in the form of (q,r,id,amount, (...neighbours...))
 		);
 using ConnectedToLobbyCallbackFunc = void(*)(ClientId, LobbyId);
 
 extern void set_error_callback(ErrorCallbackFunc func);
 extern void set_observer_data_callback();
-extern void set_player_data_callback();
+extern void set_player_data_callback(PlayerDataCallbackFunc func);
 extern void set_connected_to_lobby_callback(ConnectedToLobbyCallbackFunc func);
 
 }

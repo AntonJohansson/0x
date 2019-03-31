@@ -64,6 +64,7 @@ HashMap<LobbyId, Game> active_games;
 
 PoolAllocator<HexMap> hex_map_allocator;
 
+PlayerDataCallbackFunc player_data_callback = nullptr;
 ErrorCallbackFunc error_callback = nullptr;
 ConnectedToLobbyCallbackFunc connected_to_lobby_callback = nullptr;
 
@@ -85,6 +86,33 @@ static bool valid_lobby_request(const Lobby& lobby, const LobbyRequest& request)
 	return false;
 }
 
+static void start_new_turn(Game& game){
+	if(game.current_turn > 0 && game.current_player != game.players.end()){
+		++game.current_player;
+	}else{
+		game.current_player = game.players.begin();
+	}
+
+	game.current_turn++;
+
+	std::vector<HexPlayerData> player_map;
+	hex_map::for_each(*game.map, [&](HexCell& cell){
+				if(cell.player_id == game.current_player->client_id){
+					auto& hex_data = player_map.emplace_back(HexPlayerData{&cell, {}});
+
+					auto neighbours = hex::axial_neighbours({cell.q, cell.r});
+					for(size_t i = 0; i < hex_data.neighbours.size(); i++){
+						auto& n_cell = hex_map::at(*game.map, neighbours[i]);
+						hex_data.neighbours[i] = &n_cell;
+					}
+				}
+			});
+
+	player_data_callback(game.current_player->client_id, player_map);
+}
+
+
+
 static void start_game(Lobby& lobby){
 	if(auto game_found = active_games.at(lobby.id); game_found){
 		auto& game = *game_found;
@@ -102,19 +130,25 @@ static void start_game(Lobby& lobby){
 		game.players.push_back({player, 10});
 	}
 
-	game.current_player = game.players.begin();
-
 	if(lobby.number_of_observers){
 		// send out data to observers
 	}
+
+	start_new_turn(game);
 }
-
-
 
 
 //
 // Interface to queue requests
 //
+
+std::vector<std::string> get_lobby_list(){
+	std::vector<std::string> data;
+	active_lobbies.for_each([&](auto& pair){
+				data.push_back(pair.key);
+			});
+	return data;
+}
 
 void create_or_join_lobby(ClientId client_id, PlayerMode mode, Settings settings){
 	std::unique_lock<std::mutex> lock(queue_mutex);
@@ -122,13 +156,10 @@ void create_or_join_lobby(ClientId client_id, PlayerMode mode, Settings settings
 	printf("queueing lobby request\n");
 }
 
-void commit_player_turn(LobbyId lobby_id, uint32_t amount, uint32_t q0, uint32_t r0, uint32_t q1, uint32_t r1){
+void commit_player_turn(LobbyId lobby_id, uint32_t amount, int32_t q0, int32_t r0, int32_t q1, int32_t r1){
 	std::unique_lock<std::mutex> lock(queue_mutex);
 	commit_turn_request_queue.push_back({lobby_id, amount, q0,r0, q1,r1});
 }
-
-
-
 
 
 //
@@ -201,14 +232,49 @@ void poll(){
 			auto& cell_transfer_to 		= hex_map::at(*game.map, {request.q1,request.r1});
 
 			// TODO: finish the resources transfers
+			if(request.amount <= cell_transfer_from.resources){
+				cell_transfer_from.resources -= request.amount;
+			}else{
+				error_callback(game.current_player->client_id, "invalid transaction (" + std::to_string(request.q0) + ", " + std::to_string(request.r0) + ") has " + std::to_string(cell_transfer_from.resources) + ", trying to transfer " + std::to_string(request.amount));
+				continue;
+			}
+
+			// TODO: confirm that transaction actually comes from correct id
+			if(game.current_player->client_id != cell_transfer_from.resources){
+				continue;
+			}
+
+			if(game.current_player->client_id == cell_transfer_from.player_id && cell_transfer_from.player_id != cell_transfer_to.player_id){
+				if(cell_transfer_to.resources < request.amount){
+					// capture
+					cell_transfer_to.resources = request.amount - cell_transfer_to.resources;
+					cell_transfer_to.player_id = cell_transfer_from.player_id;
+				}else{
+					// transfer but not capture
+					cell_transfer_to.resources -= request.amount;
+				}
+			}else{
+				// boost
+				cell_transfer_to.resources += request.amount;
+			}
+
+			// make hex neutral if score (after transfer) is zero
+			if(cell_transfer_from.resources == 0){
+				cell_transfer_from.player_id = -1;
+			}
+			if(cell_transfer_to.resources == 0){
+				cell_transfer_to.player_id = -1;
+			}
+
+			start_new_turn(game);
 		}
 	}
 }
 
 
-
-
-
+void set_player_data_callback(PlayerDataCallbackFunc func){
+	player_data_callback = func;
+}
 
 void set_error_callback(ErrorCallbackFunc func){
 	error_callback = func;
