@@ -3,8 +3,8 @@
 #include <vector>
 #include <cassert>
 #include <optional>
-#include <iostream>
 #include <functional>
+#include <type_traits>
 
 // Since Optional references are not in the language yet
 // I resorted to this.

@@ -16,19 +16,19 @@
 
 namespace tcp_socket{
 
-void set_blocking(Socket& s){
+void set_blocking(Socket s){
 	// Clear O_NONBLOCK flag
 	int opts = fcntl(s, F_GETFL);
 	opts = opts & (~O_NONBLOCK);
 	fcntl(s, F_SETFL, opts);
 }
 
-void set_nonblocking(Socket& s){
+void set_nonblocking(Socket s){
 	// Set O_NONBLOCK flag
 	fcntl(s, F_SETFL, O_NONBLOCK);
 }
 
-void send(Socket& s, const unsigned char* data, size_t size){
+void send(Socket s, const unsigned char* data, size_t size){
 	if(::send(s, data, size, 0) == 1){
 		if(errno == EAGAIN || errno == EWOULDBLOCK){
 			//printf("EAGAIN/EWOULDBLOCK for %i\n", handle);
@@ -44,7 +44,7 @@ void send(Socket& s, const unsigned char* data, size_t size){
 	}
 }
 
-void send_all(Socket& s, const unsigned char* data, size_t size){
+void send_all(Socket s, const unsigned char* data, size_t size){
 	size_t total  = 0;
 	size_t nbytes = 0;
 
@@ -69,16 +69,16 @@ void send_all(Socket& s, const unsigned char* data, size_t size){
 	}
 }
 
-void send(Socket& s, const std::string& data){
+void send(Socket s, const std::string& data){
 	send(s, reinterpret_cast<const unsigned char*>(data.data()), data.size());
 }
 
-void send_all(Socket& s, const std::string& data){
+void send_all(Socket s, const std::string& data){
 	send_all(s, reinterpret_cast<const unsigned char*>(data.data()), data.size());
 }
 
 static constexpr int32_t MAXDATASIZE = 128;
-size_t recv(Socket& s, unsigned char* buffer, size_t buffer_size){
+size_t recv(Socket s, unsigned char* buffer, size_t buffer_size){
 	//static char buffer[MAXDATASIZE];
 	static int32_t nbytes = 0;
 
@@ -99,7 +99,7 @@ size_t recv(Socket& s, unsigned char* buffer, size_t buffer_size){
 	return nbytes;
 }
 
-void close(Socket& s){
+void close(Socket s){
 	::close(s);
 	s = INVALID;
 }

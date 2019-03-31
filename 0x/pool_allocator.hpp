@@ -55,7 +55,7 @@ public:
     return ptr;
   }
 
-  void dealloc(T* t){
+  void free(T* t){
     // Call destructor
     t->~T();
 

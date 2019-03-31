@@ -2,6 +2,7 @@
 
 #include "network/binary_encoding.hpp"
 #include "crc/crc32.hpp"
+#include "game_refactor.hpp"
 #include <assert.h>
 #include <stdio.h>
 
@@ -15,6 +16,7 @@ enum class PacketType{
 	COMMAND,
 	TURN_TRANSACTION,
 	ERROR_MESSAGE,
+	CONNECTED_TO_LOBBY,
 };
 
 struct SessionList{
@@ -95,6 +97,3 @@ inline void encode_error_message(BinaryData& data, const std::string& message){
 	encode::string(data, message);
 	encode_packet(data, PacketType::ERROR_MESSAGE);
 }
-
-
-

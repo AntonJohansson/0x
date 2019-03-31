@@ -3,7 +3,8 @@ set(SOURCES
 	tcp/socket_connection.cpp
 	tcp/socket.cpp
 	network/serialize_data.cpp
-	game.cpp
+	#game.cpp
+	game_refactor.cpp
 	server.cpp
 	hex.cpp
 	main.cpp
