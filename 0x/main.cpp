@@ -3,16 +3,6 @@
 #include <chrono>
 #include <thread>
 
-// TODO:
-//	- collect game statistics
-//	- restructure/rewrite newtork packet code
-//	- handle game rules correctly:
-//		- use path finding to check if moves are valid (within a closed region)
-//			- implement path finding
-//	- something is wrong with transactions or coordinates, trasfers are not happening corretly
-//	- error handling in binary encoding
-//	- fix error when trying to start a game
-
 int main(){
 	//set.add(0, [](int){
 	//			std::string line;

@@ -1,0 +1,14 @@
+Collect game and server statistics
+	- server bytes io/s
+	- meassure latency
+	- measure game update time
+Finish rewrite of network code
+	- ?
+Handle game rules correctly:
+	- boosting requires non isolated region
+		- check this via path finding
+	- when transferring to enemy (natural as well?) cells, they have to be adjacent
+Error handling in binary encoding
+	- at least dont crash...
+
+
