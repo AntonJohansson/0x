@@ -93,6 +93,15 @@ static void start_new_turn(Game& game){
 	if(game.current_turn > 0 && ++game.current_player != game.players.end()){
 		printf("-- next player\n");
 	}else{
+		if(game.current_turn > 0){
+			printf("starting new round");
+			hex_map::for_each(*game.map, [](HexCell& cell){
+					if(cell.player_id != -1){
+						cell.resources++;
+					}
+				});
+		}
+		
 		game.current_player = game.players.begin();
 	}
 
