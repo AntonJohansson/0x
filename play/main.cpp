@@ -254,6 +254,9 @@ void receive_data(int s){
 				text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
 			}
 			sessions_text.setString(text_string);
+		}else if(packet_type == 6){
+			std::string message = decode::string(data);
+			printf("Error: %s\n", message.c_str());
 		}else if(packet_type == 3){ // MAP
 			printf("received player map\n");
 			map.clear();
