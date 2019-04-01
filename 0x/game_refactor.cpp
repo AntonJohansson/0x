@@ -65,6 +65,7 @@ HashMap<LobbyId, Game> active_games;
 
 PoolAllocator<HexMap> hex_map_allocator;
 
+ObserverDataCallbackFunc observer_data_callback = nullptr;
 PlayerDataCallbackFunc player_data_callback = nullptr;
 ErrorCallbackFunc error_callback = nullptr;
 ConnectedToLobbyCallbackFunc connected_to_lobby_callback = nullptr;
@@ -72,6 +73,7 @@ ConnectedToLobbyCallbackFunc connected_to_lobby_callback = nullptr;
 }
 
 static bool lobby_is_open(const Lobby& lobby){
+	printf("lobby: %i/%i\n",lobby.number_of_players, lobby.settings.max_number_of_players);
 	return lobby.number_of_players < lobby.settings.max_number_of_players;
 }
 
@@ -85,6 +87,34 @@ static bool valid_lobby_request(const Lobby& lobby, const LobbyRequest& request)
 	}
 
 	return false;
+}
+
+static void send_observer_data(Game& game, const std::vector<ClientId>& observers){
+	// TODO: this is ridicoulus
+	uint32_t radius, player_count, current_turn;
+	std::vector<PlayerScores> player_scores;
+	std::vector<const HexCell*> map;
+
+	radius = game.map->radius;
+	player_count = game.players.size();
+	current_turn = game.current_turn;
+
+	HashMap<ClientId, uint32_t> resources;
+	hex_map::for_each(*game.map, [&](HexCell& cell){
+				map.push_back(&cell);
+				if(cell.player_id != -1){
+					auto& value = resources[cell.player_id];
+					value += cell.resources;
+				}
+			});
+
+	resources.for_each([&](auto pair){
+				player_scores.push_back({pair.key, pair.value});
+			});
+
+	for(auto& id : observers){
+		observer_data_callback(id, radius, player_count, current_turn, player_scores, map);
+	}
 }
 
 static void start_new_turn(Game& game){
@@ -148,6 +178,7 @@ static void start_game(Lobby& lobby){
 
 	if(lobby.number_of_observers){
 		// send out data to observers
+		send_observer_data(game, lobby.observers);
 	}
 
 	start_new_turn(game);
@@ -224,9 +255,14 @@ void poll(){
 
 		connected_to_lobby_callback(request.client_id, lobby->id);
 
-		if(!lobby_is_open(*lobby)){
+		if(auto game_found = active_games.at(lobby->id); !game_found && !lobby_is_open(*lobby)){
 			printf("starting game\n");
 			start_game(*lobby);
+		}else if(request.client_mode == OBSERVER){
+			if(auto game_found = active_games.at(lobby->id); game_found){
+				auto& game = *game_found;
+				send_observer_data(game, {request.client_id});
+			}
 		}
 	}	
 	lobby_request_queue.clear();
@@ -290,6 +326,9 @@ void poll(){
 	commit_turn_request_queue.clear();
 }
 
+void set_observer_data_callback(ObserverDataCallbackFunc func){
+	observer_data_callback = func;
+}
 
 void set_player_data_callback(PlayerDataCallbackFunc func){
 	player_data_callback = func;

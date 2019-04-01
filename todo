@@ -10,5 +10,6 @@ Handle game rules correctly:
 	- when transferring to enemy (natural as well?) cells, they have to be adjacent
 Error handling in binary encoding
 	- at least dont crash...
+Restructure play/visualize
 
 

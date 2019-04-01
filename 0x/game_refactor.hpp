@@ -46,11 +46,18 @@ struct HexPlayerData{
 	std::array<const HexCell*, 6> neighbours;
 };
 
+struct PlayerScores{
+	ClientId id;
+	uint32_t resources;
+};
+
 using ErrorCallbackFunc = void(*)(ClientId, const std::string&);
 using ObserverDataCallbackFunc = void(*)(ClientId, 
 		uint32_t map_radius, 
 		uint32_t player_count,
-		uint32_t current_turn
+		uint32_t current_turn,
+		std::vector<PlayerScores> player_scores,
+		std::vector<const HexCell*> map
 		// player scores
 		// data in the form of (q,r,id,amount)
 		);
@@ -61,7 +68,7 @@ using PlayerDataCallbackFunc = void(*)(ClientId,
 using ConnectedToLobbyCallbackFunc = void(*)(ClientId, LobbyId);
 
 extern void set_error_callback(ErrorCallbackFunc func);
-extern void set_observer_data_callback();
+extern void set_observer_data_callback(ObserverDataCallbackFunc func);
 extern void set_player_data_callback(PlayerDataCallbackFunc func);
 extern void set_connected_to_lobby_callback(ConnectedToLobbyCallbackFunc func);
 

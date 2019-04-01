@@ -34,6 +34,28 @@ namespace{
 	HashMap<int, Connection> connections;
 }
 
+static void observer_data_callback(game::ClientId client_id, 
+		uint32_t map_radius, 
+		uint32_t player_count,
+		uint32_t current_turn,
+		std::vector<game::PlayerScores> player_scores,
+		std::vector<const HexCell*> map){
+	BinaryData data;
+	encode::multiple_integers(data, map_radius, player_count, current_turn);
+
+	for(auto& [id, score] : player_scores){
+		encode::multiple_integers(data, id, score);
+	}
+
+	for(auto& hex_ptr : map){
+		encode::multiple_integers(data, hex_ptr->q, hex_ptr->r, hex_ptr->player_id, hex_ptr->resources);
+	}
+
+	encode_packet(data, PacketType::OBSERVER_MAP);
+
+	tcp_socket::send_all(client_id, data.data(), data.size());
+}
+
 static void player_data_callback(game::ClientId client_id, std::vector<game::HexPlayerData> player_map){
 	BinaryData data;
 	for(auto& [hex, neighbours] : player_map){
@@ -75,6 +97,7 @@ void start(){
 	
 	set.add(server_socket, accept_client_connections);
 
+	game::set_observer_data_callback(observer_data_callback);
 	game::set_player_data_callback(player_data_callback);
 	game::set_error_callback(error_message_callback);
 	game::set_connected_to_lobby_callback(connected_to_lobby_callback);
