@@ -2,6 +2,7 @@
 
 #include "hex.hpp"
 #include <array>
+#include <vector>
 #include <functional>
 #include <assert.h>
 
@@ -25,7 +26,7 @@ struct HexMap{
 
 	HexCell* storage = nullptr;
 
-	HexMap(int r, int p)
+	HexMap(int r, int p, const std::vector<uint32_t>& player_ids)
 		: radius(r), players(p) {
 		// TODO: big nono
 		size_t size = (2*r+1)*(2*r+1);
@@ -47,7 +48,7 @@ struct HexMap{
 		hex::AxialVec start = {radius-1, 0};
 		for(int i = 0; i < players; i++){
 			auto& cell = hex_map::at(*this, start);
-			cell.player_id = i;
+			cell.player_id = player_ids[i];
 			cell.resources = 10;
 
 			start = hex::axial_rotate(start, {0,0});

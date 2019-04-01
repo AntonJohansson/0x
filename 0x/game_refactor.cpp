@@ -3,6 +3,7 @@
 #include "hex_map.hpp"
 #include "murmur_hash3.hpp"
 #include "pool_allocator.hpp"
+#include <stdio.h>
 #include <vector>
 #include <chrono>
 #include <mutex>
@@ -87,8 +88,10 @@ static bool valid_lobby_request(const Lobby& lobby, const LobbyRequest& request)
 }
 
 static void start_new_turn(Game& game){
-	if(game.current_turn > 0 && game.current_player != game.players.end()){
-		++game.current_player;
+	printf("starting new turn\n");
+
+	if(game.current_turn > 0 && ++game.current_player != game.players.end()){
+		printf("-- next player\n");
 	}else{
 		game.current_player = game.players.begin();
 	}
@@ -114,7 +117,9 @@ static void start_new_turn(Game& game){
 
 
 static void start_game(Lobby& lobby){
+	printf("starting new game\n");
 	if(auto game_found = active_games.at(lobby.id); game_found){
+		printf("-- game already found, restarting\n");
 		auto& game = *game_found;
 
 		if(game.map){
@@ -124,9 +129,11 @@ static void start_game(Lobby& lobby){
 	}
 
 	auto& game = active_games[lobby.id];
-	game.map = hex_map_allocator.alloc(lobby.settings.map_radius, lobby.settings.max_number_of_players);
+	game.map = hex_map_allocator.alloc(lobby.settings.map_radius, lobby.settings.max_number_of_players,lobby.players);
 
+	printf("-- pushing players\n");
 	for(auto& player : lobby.players){
+		printf("---- %i\n", player);
 		game.players.push_back({player, 10});
 	}
 
@@ -218,11 +225,11 @@ void poll(){
 	active_games.for_each([](auto& pair){
 				auto& [lobby_id, game] = pair;
 
-				auto dur = std::chrono::high_resolution_clock::now() - game.current_player_begin_turn_time_point;
-				if(dur > std::chrono::milliseconds(500)){
-					error_callback(game.current_player->client_id, "time limit crossed.");
-					game.current_player = game.players.erase(game.current_player);
-				}
+				//auto dur = std::chrono::high_resolution_clock::now() - game.current_player_begin_turn_time_point;
+				//if(dur > std::chrono::milliseconds(500)){
+				//	error_callback(game.current_player->client_id, "time limit crossed.");
+				//	game.current_player = game.players.erase(game.current_player);
+				//}
 			});
 	
 	for(auto& request : commit_turn_request_queue){
@@ -231,19 +238,21 @@ void poll(){
 			auto& cell_transfer_from 	= hex_map::at(*game.map, {request.q0,request.r0});
 			auto& cell_transfer_to 		= hex_map::at(*game.map, {request.q1,request.r1});
 
+			// TODO: confirm that transaction actually comes from correct id
+			if(game.current_player->client_id != cell_transfer_from.player_id){
+				start_new_turn(game);
+				continue;
+			}
+
 			// TODO: finish the resources transfers
 			if(request.amount <= cell_transfer_from.resources){
 				cell_transfer_from.resources -= request.amount;
 			}else{
 				error_callback(game.current_player->client_id, "invalid transaction (" + std::to_string(request.q0) + ", " + std::to_string(request.r0) + ") has " + std::to_string(cell_transfer_from.resources) + ", trying to transfer " + std::to_string(request.amount));
+				start_new_turn(game);
 				continue;
 			}
-
-			// TODO: confirm that transaction actually comes from correct id
-			if(game.current_player->client_id != cell_transfer_from.resources){
-				continue;
-			}
-
+			
 			if(game.current_player->client_id == cell_transfer_from.player_id && cell_transfer_from.player_id != cell_transfer_to.player_id){
 				if(cell_transfer_to.resources < request.amount){
 					// capture
@@ -269,6 +278,7 @@ void poll(){
 			start_new_turn(game);
 		}
 	}
+	commit_turn_request_queue.clear();
 }
 
 

@@ -46,6 +46,11 @@ static void player_data_callback(game::ClientId client_id, std::vector<game::Hex
 		}
 	}
 
+	printf("size: %zu\n", player_map.size());
+	printf("sending player map of size %zu\n", data.size());
+
+	encode_packet(data, PacketType::PLAYER_MAP);
+
 	tcp_socket::send_all(client_id, data.data(), data.size());
 }
 
@@ -182,6 +187,7 @@ void receive_client_data(int s){
 			}
 		}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
 			BinaryData data;
+			// TODO: might not be thread safe
 			for(auto& lobby : game::get_lobby_list()){
 				encode::string(data, lobby);
 			}
@@ -214,6 +220,7 @@ void receive_client_data(int s){
 				int32_t q0, r0, q1, r1;
 				uint32_t res;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
+				printf("received transaction (%i,%i) -%i-> (%i,%i)\n", q0,r0,res,q1,r1);
 
 				game::commit_player_turn(lobby_id, res, q0, r0, q1, r1);
 

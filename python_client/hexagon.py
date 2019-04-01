@@ -39,7 +39,7 @@ class hexagon_bot:
         self.lobby_id = -1
 
     def unpack_hex(self, data, index):
-        q, r, player, res = struct.unpack_from('>4i', data, index)
+        q, r, player, res = struct.unpack_from('>iiiI', data, index)
         return q,r,player,res
     
     def interpret_turn_data(self, data):
@@ -72,7 +72,8 @@ class hexagon_bot:
         self.server.send(bytes(message, 'utf8'))
 
     def submit_transaction(self, amount, q0,r0, q1,r1):
-        self.server.send(struct.pack('>Biiiii', 3, amount, q0,r0, q1,r1))
+        print("sending transaction ({},{}) -{}-> {},{}".format(q0,r0,amount,q1,r1))
+        self.server.send(struct.pack('>BQIiiii', 3, self.lobby_id, amount, q0,r0, q1,r1))
 
     def handle_turn_data(self, map):
         print('You forgot to override handle_turn_data(...)')
@@ -102,9 +103,9 @@ class hexagon_bot:
         if packet_id == INVALID:
             print('Invalid packet, server (or network) error')
         elif packet_id == PLAYER_MAP:
+            print("receiveed palyer map")
             map = self.interpret_turn_data(data)
             self.handle_turn_data(map)
-            print("end");
         elif packet_id == ERROR_MESSAGE:
             length = struct.unpack_from('>I', data)[0]
             string = struct.unpack_from('>'+str(length)+'s', data, 4)[0]

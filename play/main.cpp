@@ -74,6 +74,8 @@ RGB hsl_to_rgb(HSL hsl){
 constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
 
+uint64_t lobby_id = 0;
+
 std::thread server_thread;
 
 std::vector<std::string> sessions;
@@ -253,13 +255,14 @@ void receive_data(int s){
 			}
 			sessions_text.setString(text_string);
 		}else if(packet_type == 3){ // MAP
+			printf("received player map\n");
 			map.clear();
 
 			while(data.size() > data_left_size){
-				int q;
-				int r;
-				int player_id;
-				int resources;
+				int32_t q;
+				int32_t r;
+				int32_t player_id;
+				uint32_t resources;
 
 				decode::multiple_integers(data, q, r, player_id, resources);
 				map.push_back(Cell{q,r,resources,player_id, {}});
@@ -273,6 +276,8 @@ void receive_data(int s){
 					//}
 				}
 			}
+		}else if(packet_type == 7){
+			decode::integer(data, lobby_id);
 		}
 	}
 }
@@ -412,6 +417,7 @@ int main(){
 				if(doing_transfer){
 					BinaryData data;
 					encode::u8(data, 3);
+					encode::u64(data, lobby_id);
 					encode::u32(data, transfer_amount);
 					encode::u32(data, m0.x);
 					encode::u32(data, m0.y);
