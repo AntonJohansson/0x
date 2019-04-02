@@ -35,8 +35,8 @@ CONNECTED_TO_LOBBY  = 7
 class hexagon_bot:
     def __init__(self):
         self.server = socket.socket()
-        self.last_packet_info = ""
         self.lobby_id = -1
+        self.turn_stack = ""
 
     def unpack_hex(self, data, index):
         q, r, player, res = struct.unpack_from('>iiiI', data, index)
@@ -72,28 +72,33 @@ class hexagon_bot:
         self.server.send(bytes(message, 'utf8'))
 
     def submit_transaction(self, amount, q0,r0, q1,r1):
-        print("sending transaction ({},{}) -{}-> {},{}".format(q0,r0,amount,q1,r1))
+        #print("sending transaction ({},{}) -{}-> {},{}".format(q0,r0,amount,q1,r1))
+        self.turn_stack += "\tsubmitting transaction {}: {},{} - {}-> {},{}\n".format(self.lobby_id, q0,r0,amount,q1,r1)
         self.server.send(struct.pack('>BQIiiii', 3, self.lobby_id, amount, q0,r0, q1,r1))
 
     def handle_turn_data(self, map):
         print('You forgot to override handle_turn_data(...)')
 
     def receive_data(self):
-        print("begin");
+        #print("begin");
         # packet_size is 4 bytes
         # packet_size only concerns actual payload and not 
         # the packet id. This might be bad practice or something idunno
+        self.turn_stack += "\treceiving packet size\n"
         packet_size_data = self.server.recv(4)
         packet_size = struct.unpack('>I', packet_size_data)[0]
 
         # get the packet id which is an unsigned char
+        self.turn_stack += "\treceiving packet id\n"
         packet_id_data = self.server.recv(1)
         packet_id = struct.unpack('>B', packet_id_data)[0]
 
         # crc
+        self.turn_stack += "\treceiving payload crc\n"
         crc_data = self.server.recv(4)
         crc = struct.unpack('>I', crc_data)[0]
 
+        self.turn_stack += "\treceiving payload\n"
         data = self.server.recv(packet_size)
 
         payload_crc = buffer_crc32(data, packet_size)
@@ -103,13 +108,18 @@ class hexagon_bot:
         if packet_id == INVALID:
             print('Invalid packet, server (or network) error')
         elif packet_id == PLAYER_MAP:
-            print("receiveed palyer map")
+            self.turn_stack += "\thandling player map\n"
+            #print("receiveed palyer map")
             map = self.interpret_turn_data(data)
             self.handle_turn_data(map)
         elif packet_id == ERROR_MESSAGE:
+            self.turn_stack += "\thandling error message\n"
             length = struct.unpack_from('>I', data)[0]
             string = struct.unpack_from('>'+str(length)+'s', data, 4)[0]
             print("Error: " + string.decode('utf8'))
+            print("callstack-ish:\n" + self.turn_stack)
+            self.turn_stack = ""
+            exit()
         elif packet_id == CONNECTED_TO_LOBBY:
             self.lobby_id = struct.unpack_from('>Q', data)[0]
             print("connected to lobby: {}".format(self.lobby_id))

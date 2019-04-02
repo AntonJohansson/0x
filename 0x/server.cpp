@@ -28,6 +28,7 @@ namespace{
 	struct Connection{
 		std::string ip_address = "";
 		//game::SessionInfo session_info = {};
+		game::LobbyId lobby_id = 0;
 		int handle = -1;
 	};
 
@@ -68,8 +69,8 @@ static void player_data_callback(game::ClientId client_id, std::vector<game::Hex
 		}
 	}
 
-	printf("size: %zu\n", player_map.size());
-	printf("sending player map of size %zu\n", data.size());
+	//printf("size: %zu\n", player_map.size());
+	//printf("sending player map of size %zu\n", data.size());
 
 	encode_packet(data, PacketType::PLAYER_MAP);
 
@@ -84,6 +85,12 @@ static void error_message_callback(game::ClientId client_id, const std::string& 
 }
 
 static void connected_to_lobby_callback(game::ClientId client_id, game::LobbyId lobby_id){
+	if(auto connection_found = connections.at(client_id); connection_found){
+		auto& connection = *connection_found;
+		connection.lobby_id = lobby_id;
+	}
+
+
 	BinaryData data;
 	encode::integer(data, lobby_id);
 	encode_packet(data, PacketType::CONNECTED_TO_LOBBY);
@@ -161,6 +168,10 @@ void accept_client_connections(int s){
 void on_client_disconnect(int s){
 	if(auto connection_found = connections.at(s)){
 		auto connection = *connection_found;
+
+		game::disconnect_from_lobby(s, connection.lobby_id);
+
+		connections.erase(s);
 
 		//if(connection.session_info.active){
 		//	game::disconnect_from_session(s, connection.session_info);

@@ -28,6 +28,7 @@ using ClientId = uint32_t;
 // Interfact to queue game requests
 //
 
+extern void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id);
 extern std::vector<std::string> get_lobby_list();
 extern void create_or_join_lobby(ClientId client_id, PlayerMode mode, Settings settings);
 extern void commit_player_turn(LobbyId lobby_id, uint32_t amount, int32_t q0, int32_t r0, int32_t q1, int32_t r1);

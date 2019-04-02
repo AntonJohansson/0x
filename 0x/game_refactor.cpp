@@ -7,6 +7,7 @@
 #include <vector>
 #include <chrono>
 #include <mutex>
+#include <algorithm>
 
 namespace game{
 namespace{
@@ -49,6 +50,7 @@ struct Game{
 
 	uint32_t current_turn = 0;
 
+	std::vector<ClientId> observers;
 	std::vector<PlayerInfo> players;
 	std::vector<PlayerInfo>::iterator current_player;
 	std::chrono::high_resolution_clock::time_point current_player_begin_turn_time_point;
@@ -118,13 +120,13 @@ static void send_observer_data(Game& game, const std::vector<ClientId>& observer
 }
 
 static void start_new_turn(Game& game){
-	printf("starting new turn\n");
+	//printf("starting new turn\n");
 
 	if(game.current_turn > 0 && ++game.current_player != game.players.end()){
-		printf("-- next player\n");
+		//printf("-- next player\n");
 	}else{
 		if(game.current_turn > 0){
-			printf("starting new round");
+			//printf("starting new round");
 			hex_map::for_each(*game.map, [](HexCell& cell){
 					if(cell.player_id != -1){
 						cell.resources++;
@@ -136,6 +138,13 @@ static void start_new_turn(Game& game){
 	}
 
 	game.current_turn++;
+	if(game.current_turn > 0){
+		game.current_player_begin_turn_time_point = std::chrono::high_resolution_clock::now();
+	}
+
+	if(game.observers.size() > 0){
+		send_observer_data(game, game.observers);
+	}
 
 	std::vector<HexPlayerData> player_map;
 	hex_map::for_each(*game.map, [&](HexCell& cell){
@@ -176,6 +185,8 @@ static void start_game(Lobby& lobby){
 		game.players.push_back({player, 10});
 	}
 
+	game.observers = lobby.observers;
+
 	if(lobby.number_of_observers){
 		// send out data to observers
 		send_observer_data(game, lobby.observers);
@@ -189,7 +200,47 @@ static void start_game(Lobby& lobby){
 // Interface to queue requests
 //
 
+void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id){
+	std::unique_lock<std::mutex> lock(queue_mutex);
+	//TODO: not handling if current_player has client_id
+	if(auto game_found = active_games.at(lobby_id); game_found){
+		auto& game = *game_found;
+
+		game.observers.erase(std::remove(game.observers.begin(), game.observers.end(), lobby_id), game.observers.end());
+		game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){return info.client_id == client_id;}), game.players.end());
+
+		if(game.players.empty()){
+			printf("game empty, closing\n");
+			hex_map_allocator.free(game.map);
+			active_games.erase(lobby_id);
+		}
+	}
+
+	std::string lobby_name = "";
+	active_lobbies.for_each([&](auto& pair){
+				if(pair.value.id == lobby_id){
+					lobby_name = pair.value.settings.name;
+				}
+			});
+
+	if(!lobby_name.empty()){
+		if(auto lobby_found = active_lobbies.at(lobby_name); lobby_found){
+			auto& lobby = *lobby_found;
+
+			lobby.observers.erase(std::remove(lobby.observers.begin(), lobby.observers.end(), client_id), lobby.observers.end());
+			lobby.players.erase(std::remove(lobby.players.begin(), lobby.players.end(), client_id), lobby.players.end());
+
+			if(lobby.players.empty() && lobby.observers.empty()){
+				printf("lobby empty, closing\n");
+				active_lobbies.erase(lobby_name);
+			}
+		}
+	}
+
+}
+
 std::vector<std::string> get_lobby_list(){
+	std::unique_lock<std::mutex> lock(queue_mutex);
 	std::vector<std::string> data;
 	active_lobbies.for_each([&](auto& pair){
 				data.push_back(pair.key);
@@ -214,6 +265,8 @@ void commit_player_turn(LobbyId lobby_id, uint32_t amount, int32_t q0, int32_t r
 //
 
 void poll(){
+	std::unique_lock<std::mutex> lock(queue_mutex);
+
 	for(auto& request : lobby_request_queue){
 		Lobby* lobby = nullptr;
 
@@ -261,6 +314,7 @@ void poll(){
 		}else if(request.client_mode == OBSERVER){
 			if(auto game_found = active_games.at(lobby->id); game_found){
 				auto& game = *game_found;
+				game.observers.push_back(request.client_id);
 				send_observer_data(game, {request.client_id});
 			}
 		}
@@ -269,12 +323,15 @@ void poll(){
 
 	active_games.for_each([](auto& pair){
 				auto& [lobby_id, game] = pair;
+				//printf("\r waiting on player: %i\n", game.current_player->client_id);
 
-				//auto dur = std::chrono::high_resolution_clock::now() - game.current_player_begin_turn_time_point;
-				//if(dur > std::chrono::milliseconds(500)){
-				//	error_callback(game.current_player->client_id, "time limit crossed.");
-				//	game.current_player = game.players.erase(game.current_player);
-				//}
+				auto dur = std::chrono::high_resolution_clock::now() - game.current_player_begin_turn_time_point;
+				if(dur > std::chrono::milliseconds(1000)){
+					error_callback(game.current_player->client_id, "time limit crossed.");
+					start_new_turn(game);
+					// doing this delete fucks up every thing
+					//game.current_player = game.players.erase(game.current_player);
+				}
 			});
 	
 	for(auto& request : commit_turn_request_queue){
