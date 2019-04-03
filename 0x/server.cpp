@@ -17,6 +17,8 @@
 #include <string>
 #include <string_view>
 
+#include <iostream>
+
 namespace server{
 namespace{
 	PollSet set;
@@ -58,7 +60,7 @@ static void observer_data_callback(game::ClientId client_id,
 }
 
 static void player_data_callback(game::ClientId client_id, std::vector<game::HexPlayerData> player_map){
-	printf("sending player data to %i\n", client_id);
+	//printf("sending player data to %i\n", client_id);
 	BinaryData data;
 	for(auto& [hex, neighbours] : player_map){
 		encode::multiple_integers(data, hex->q, hex->r, static_cast<uint32_t>(1), hex->resources);
@@ -202,32 +204,67 @@ void receive_client_data(int s){
 			//	game::disconnect_from_session(s, connection.session_info);
 			//}
 
-			auto mode 		= get_next_word(sv);
-			auto name 		= get_next_word(sv);
-			auto players 	= get_next_word(sv);
+			std::cout << sv << std::endl;
+			auto player_mode_sv 		= get_next_word(sv);
+			std::cout << sv << std::endl;
+			auto lobby_name_sv			= get_next_word(sv);
+			std::cout << sv << std::endl;
+			auto players_sv 				= get_next_word(sv);
+			std::cout << sv << std::endl;
+			auto radius_sv 					= get_next_word(sv);
+			std::cout << sv << std::endl;
+			auto restart_on_win_sv 	= get_next_word(sv);
+			std::cout << sv << std::endl;
+
+			game::Settings settings;
 
 			game::PlayerMode player_mode = game::NONE;
-			if(mode.compare("observer") == 0 || mode.compare("o") == 0){player_mode = game::OBSERVER;}
-			else if(mode.compare("player") == 0 || mode.compare("p") == 0){player_mode = game::PLAYER;}
+			std::string lobby_name;
+			uint32_t players;
+			uint32_t radius;
+			bool restart_on_win;
 
-			int max_players;
-			if(to_number(players, max_players)){
-				std::string name_str{name};
-				//connection.session_info = game::create_or_join_session(s, player_mode, name_str, max_players);
-				game::create_or_join_lobby(s, player_mode, {
-							.name = name_str,
-							.max_number_of_players = max_players,
-							.map_radius = 3
-						});
+			if(player_mode_sv.size() && lobby_name_sv.size()){
+				if(player_mode_sv.compare("observer") == 0 || player_mode_sv.compare("o") == 0){player_mode = game::OBSERVER;}
+				else if(player_mode_sv.compare("player") == 0 || player_mode_sv.compare("p") == 0){player_mode = game::PLAYER;}
+				else{
+					player_mode = game::OBSERVER;
+				}
+
+				settings.name = std::string(lobby_name_sv);
 			}
-		}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
-			BinaryData data;
-			// TODO: might not be thread safe
-			for(auto& lobby : game::get_lobby_list()){
-				encode::string(data, lobby);
+			
+			if(players_sv.size() && to_number(players_sv, players)){
+				settings.max_number_of_players = players;
+			}else{
+				settings.max_number_of_players = 6;
 			}
 
-			encode_packet(data, PacketType::SESSION_LIST);
+			if(radius_sv.size() && to_number(radius_sv, radius)){
+				settings.map_radius = radius;
+			}else{
+				settings.map_radius = 3;
+			}
+
+			if(restart_on_win_sv.size()){
+				if(restart_on_win_sv.compare("true") == 0){
+					settings.restart_on_win = true;
+				}else{
+					settings.restart_on_win = false;
+				}
+			}
+
+
+			//connection.session_info = game::create_or_join_session(s, player_mode, name_str, max_players);
+			game::create_or_join_lobby(s, player_mode, settings);
+	}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
+		BinaryData data;
+		// TODO: might not be thread safe
+		for(auto& lobby : game::get_lobby_list()){
+			encode::string(data, lobby);
+		}
+
+		encode_packet(data, PacketType::SESSION_LIST);
 			tcp_socket::send_all(s, data.data(), data.size());
 
 			//if(game::active_sessions.size()){
@@ -256,7 +293,7 @@ void receive_client_data(int s){
 				uint32_t res;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
 				//printf("received transaction (%i,%i) -%i-> (%i,%i)\n", q0,r0,res,q1,r1);
-				printf("\treceived transaction from %i\n", s);
+				//printf("\treceived transaction from %i\n", s);
 				
 
 				game::commit_player_turn(lobby_id, res, q0, r0, q1, r1);

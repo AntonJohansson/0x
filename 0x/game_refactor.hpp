@@ -19,6 +19,7 @@ struct Settings{
 	std::string name{"default"};
 	uint32_t max_number_of_players = 0;
 	uint32_t map_radius = 0;
+	bool restart_on_win = false;
 };
 
 using LobbyId = uint64_t;

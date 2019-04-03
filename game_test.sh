@@ -7,7 +7,7 @@ termite -e "./build/0x/0x"&
 sleep 0.1
 
 for i in $(seq 1 $n); do
-	termite -e "python python_client/client.py coj p hej $s"&
+	termite -e "python python_client/client.py coj p hej $s 5 true"&
 done
 termite -e "python python_client/snake.py coj p hej $s"&
 #for i in $(seq 1 $n); do

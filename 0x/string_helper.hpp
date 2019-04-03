@@ -3,15 +3,22 @@
 #include <string_view>
 #include <string>
 #include <charconv>
+#include <iostream>
 
 std::string_view get_next_word(std::string_view& sv){
 	while(sv[0] == ' ' || sv[0] == '\n')sv.remove_prefix(1);
 
 	auto i = sv.find_first_of(" \n");
-	auto ret = sv.substr(0,i);
-	sv.remove_prefix(i);
 
-	return ret;
+	if(i == std::string_view::npos){
+		auto ret = sv;
+		sv.remove_prefix(sv.size());
+		return ret;
+	}else{
+		auto ret = sv.substr(0,i);
+		sv.remove_prefix(i);
+		return ret;
+	}
 }
 
 bool compare_next_word(std::string_view& sv, const std::string& word){

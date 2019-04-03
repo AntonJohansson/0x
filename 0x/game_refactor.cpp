@@ -48,6 +48,8 @@ struct Game{
 		uint32_t score;
 	};
 
+	bool restart_on_win = false;
+
 	uint32_t current_turn = 0;
 
 	std::vector<ClientId> observers;
@@ -75,7 +77,7 @@ ConnectedToLobbyCallbackFunc connected_to_lobby_callback = nullptr;
 }
 
 static bool lobby_is_open(const Lobby& lobby){
-	printf("lobby: %i/%i\n",lobby.number_of_players, lobby.settings.max_number_of_players);
+	//printf("lobby: %i/%i\n",lobby.number_of_players, lobby.settings.max_number_of_players);
 	return lobby.number_of_players < lobby.settings.max_number_of_players;
 }
 
@@ -120,7 +122,7 @@ static void send_observer_data(Game& game, const std::vector<ClientId>& observer
 }
 
 static void start_new_turn(Game& game){
-	printf("\tstarting new turn\n");
+	//printf("\tstarting new turn\n");
 
 	if(game.current_turn > 0 && ++game.current_player != game.players.end()){
 		//printf("-- next player\n");
@@ -146,7 +148,7 @@ static void start_new_turn(Game& game){
 		send_observer_data(game, game.observers);
 	}
 
-	printf("getting player map for %i\n", game.current_player->client_id);
+	//printf("getting player map for %i\n", game.current_player->client_id);
 	std::vector<HexPlayerData> player_map;
 	hex_map::for_each(*game.map, [&](HexCell& cell){
 				if(cell.player_id == game.current_player->client_id){
@@ -159,8 +161,8 @@ static void start_new_turn(Game& game){
 					}
 				}
 			});
-	printf("map size: %zu\n", player_map.size());
-	printf("player size: %zu\n", game.players.size());
+	//printf("map size: %zu\n", player_map.size());
+	//printf("player size: %zu\n", game.players.size());
 
 	// TODO I DONT THINK THIS IS NEEDED
 	if(!player_map.empty()){
@@ -173,9 +175,9 @@ static void start_new_turn(Game& game){
 
 
 static void start_game(Lobby& lobby){
-	printf("starting new game\n");
+	//printf("starting new game\n");
 	if(auto game_found = active_games.at(lobby.id); game_found){
-		printf("-- game already found, restarting\n");
+		//printf("-- game already found, restarting\n");
 		auto& game = *game_found;
 
 		if(game.map){
@@ -187,9 +189,12 @@ static void start_game(Lobby& lobby){
 	auto& game = active_games[lobby.id];
 	game.map = hex_map_allocator.alloc(lobby.settings.map_radius, lobby.settings.max_number_of_players,lobby.players);
 
-	printf("-- pushing players\n");
+	game.restart_on_win = lobby.settings.restart_on_win;
+	printf("restart: %i\n", (int)game.restart_on_win);
+
+	//printf("-- pushing players\n");
 	for(auto& player : lobby.players){
-		printf("---- %i\n", player);
+		//printf("---- %i\n", player);
 		game.players.push_back({player, 10});
 	}
 
@@ -225,7 +230,7 @@ void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id){
 		game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){return info.client_id == client_id;}), game.players.end());
 
 		if(game.players.empty()){
-			printf("game empty, closing\n");
+			//printf("game empty, closing\n");
 			hex_map_allocator.free(game.map);
 			active_games.erase(lobby_id);
 		}
@@ -260,7 +265,7 @@ void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id){
 
 
 			if(lobby.players.empty() && lobby.observers.empty()){
-				printf("lobby empty, closing\n");
+				//printf("lobby empty, closing\n");
 				active_lobbies.erase(lobby_name);
 			}
 		}
@@ -280,12 +285,12 @@ std::vector<std::string> get_lobby_list(){
 void create_or_join_lobby(ClientId client_id, PlayerMode mode, Settings settings){
 	std::unique_lock<std::mutex> lock(queue_mutex);
 	lobby_request_queue.push_back({client_id, mode, settings});
-	printf("queueing lobby request\n");
+	//printf("queueing lobby request\n");
 }
 
 void commit_player_turn(LobbyId lobby_id, uint32_t amount, int32_t q0, int32_t r0, int32_t q1, int32_t r1){
 	std::unique_lock<std::mutex> lock(queue_mutex);
-	printf("\t\tcommiting turn request\n");
+	//printf("\t\tcommiting turn request\n");
 	commit_turn_request_queue.push_back({lobby_id, amount, q0,r0, q1,r1});
 }
 
@@ -303,13 +308,13 @@ void poll(){
 		// Fetch or create the lobby,
 		// then check if the request is valid.
 		if(auto lobby_found = active_lobbies.at(request.settings.name); lobby_found){
-			printf("joining lobby\n");
+			//printf("joining lobby\n");
 			lobby = &*lobby_found;
 			if(!valid_lobby_request(*lobby, request)){
 				continue;
 			}
 		}else{
-			printf("creating new lobby\n");
+			//printf("creating new lobby\n");
 			Lobby new_lobby{
 				.id = ++global_lobby_id_counter,
 				.settings = request.settings
@@ -339,7 +344,7 @@ void poll(){
 		connected_to_lobby_callback(request.client_id, lobby->id);
 
 		if(auto game_found = active_games.at(lobby->id); !game_found && !lobby_is_open(*lobby)){
-			printf("starting game\n");
+			//printf("starting game\n");
 			start_game(*lobby);
 		}else if(request.client_mode == OBSERVER){
 			if(auto game_found = active_games.at(lobby->id); game_found){
@@ -365,7 +370,7 @@ void poll(){
 			});
 	
 	for(auto& request : commit_turn_request_queue){
-		printf("\tprocessing turn request from \n");
+		//printf("\tprocessing turn request from \n");
 		if(auto game_found = active_games.at(request.lobby_id); game_found){
 			auto& game = *game_found;
 			auto& cell_transfer_from 	= hex_map::at(*game.map, {request.q0,request.r0});
@@ -409,6 +414,7 @@ void poll(){
 			}
 
 			// TODO
+			// ...
 			// check for zero resource things
 			auto still_in_game = [](HexMap& map, ClientId id){
 				uint32_t tiles = 0;
@@ -422,6 +428,7 @@ void poll(){
 				return tiles;
 			};
 
+			// TODO: LOL
 			size_t current_player_index = game.current_player - game.players.begin();
 			size_t before = game.players.size();
 			game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){
@@ -437,8 +444,23 @@ void poll(){
 					game.current_player = game.players.begin() + current_player_index-1;
 				}
 			}
-			
-			start_new_turn(game);
+
+			if(game.players.size() == 1 && game.restart_on_win){
+				// AWWWWWWWWWWWWWWWWWWHG
+				Lobby* lobby = nullptr;
+				active_lobbies.for_each([&](auto& pair){
+							if(pair.value.id == request.lobby_id){
+								lobby = &pair.value;
+								return;
+							}
+						});
+
+				if(lobby){
+					start_game(*lobby);
+				}
+			}else{
+				start_new_turn(game);
+			}
 		}
 	}
 	commit_turn_request_queue.clear();
