@@ -77,6 +77,7 @@ constexpr int32_t SCREEN_HEIGHT = 600;
 uint64_t lobby_id = 0;
 
 std::thread server_thread;
+bool my_turn = false;
 
 std::vector<std::string> sessions;
 sf::Text sessions_text;
@@ -259,6 +260,8 @@ void receive_data(int s){
 			printf("Error: %s\n", message.c_str());
 		}else if(packet_type == 3){ // MAP
 			printf("received player map\n");
+			my_turn = true;
+			sessions_text.setString(std::to_string(my_turn));
 			map.clear();
 
 			while(data.size() > data_left_size){
@@ -428,6 +431,8 @@ int main(){
 					encode::u32(data, m1.y);
 					auto str = std::string(data.begin(), data.end());
 					socket.send_all(str);
+					my_turn = false;
+					sessions_text.setString(std::to_string(my_turn));
 					doing_transfer = false;
 				}else{
 					doing_transfer = true;

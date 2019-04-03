@@ -58,6 +58,7 @@ static void observer_data_callback(game::ClientId client_id,
 }
 
 static void player_data_callback(game::ClientId client_id, std::vector<game::HexPlayerData> player_map){
+	printf("sending player data to %i\n", client_id);
 	BinaryData data;
 	for(auto& [hex, neighbours] : player_map){
 		encode::multiple_integers(data, hex->q, hex->r, static_cast<uint32_t>(1), hex->resources);
@@ -254,7 +255,9 @@ void receive_client_data(int s){
 				int32_t q0, r0, q1, r1;
 				uint32_t res;
 				decode::multiple_integers(data, res, q0, r0, q1, r1);
-				printf("received transaction (%i,%i) -%i-> (%i,%i)\n", q0,r0,res,q1,r1);
+				//printf("received transaction (%i,%i) -%i-> (%i,%i)\n", q0,r0,res,q1,r1);
+				printf("\treceived transaction from %i\n", s);
+				
 
 				game::commit_player_turn(lobby_id, res, q0, r0, q1, r1);
 

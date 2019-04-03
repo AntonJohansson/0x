@@ -80,6 +80,7 @@ class hexagon_bot:
         print('You forgot to override handle_turn_data(...)')
 
     def receive_data(self):
+        print("received data")
         #print("begin");
         # packet_size is 4 bytes
         # packet_size only concerns actual payload and not 

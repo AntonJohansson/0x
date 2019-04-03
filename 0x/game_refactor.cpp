@@ -120,7 +120,7 @@ static void send_observer_data(Game& game, const std::vector<ClientId>& observer
 }
 
 static void start_new_turn(Game& game){
-	//printf("starting new turn\n");
+	printf("\tstarting new turn\n");
 
 	if(game.current_turn > 0 && ++game.current_player != game.players.end()){
 		//printf("-- next player\n");
@@ -146,6 +146,7 @@ static void start_new_turn(Game& game){
 		send_observer_data(game, game.observers);
 	}
 
+	printf("getting player map for %i\n", game.current_player->client_id);
 	std::vector<HexPlayerData> player_map;
 	hex_map::for_each(*game.map, [&](HexCell& cell){
 				if(cell.player_id == game.current_player->client_id){
@@ -158,6 +159,8 @@ static void start_new_turn(Game& game){
 					}
 				}
 			});
+	printf("map size: %zu\n", player_map.size());
+	printf("player size: %zu\n", game.players.size());
 
 	// TODO I DONT THINK THIS IS NEEDED
 	if(!player_map.empty()){
@@ -282,6 +285,7 @@ void create_or_join_lobby(ClientId client_id, PlayerMode mode, Settings settings
 
 void commit_player_turn(LobbyId lobby_id, uint32_t amount, int32_t q0, int32_t r0, int32_t q1, int32_t r1){
 	std::unique_lock<std::mutex> lock(queue_mutex);
+	printf("\t\tcommiting turn request\n");
 	commit_turn_request_queue.push_back({lobby_id, amount, q0,r0, q1,r1});
 }
 
@@ -361,6 +365,7 @@ void poll(){
 			});
 	
 	for(auto& request : commit_turn_request_queue){
+		printf("\tprocessing turn request from \n");
 		if(auto game_found = active_games.at(request.lobby_id); game_found){
 			auto& game = *game_found;
 			auto& cell_transfer_from 	= hex_map::at(*game.map, {request.q0,request.r0});
@@ -417,9 +422,21 @@ void poll(){
 				return tiles;
 			};
 
+			size_t current_player_index = game.current_player - game.players.begin();
+			size_t before = game.players.size();
 			game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){
-						return !still_in_game(*game.map, info.client_id);
+						if(!still_in_game(*game.map, info.client_id)){
+							return true;
+						}
+						return false;
 						}), game.players.end());
+			if(game.players.size() != before){
+				if(current_player_index > game.players.size()){
+					game.current_player = game.players.begin();
+				}else{
+					game.current_player = game.players.begin() + current_player_index-1;
+				}
+			}
 			
 			start_new_turn(game);
 		}
