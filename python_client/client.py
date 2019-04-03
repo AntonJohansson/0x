@@ -1,5 +1,6 @@
 from hexagon import hexagon_bot
 from random import randint
+from random import shuffle
 import sys
 
 class random_bot(hexagon_bot):
@@ -9,6 +10,7 @@ class random_bot(hexagon_bot):
         c0 = map[transfer_from][0]
 
         for cell, neigh in map:
+            shuffle(neigh)
             for n in neigh:
                 if n[2] == 0 or (n[2] == 2 and c0[3]/2 > n[3]):
                     self.submit_transaction(round(c0[3]/2), c0[0], c0[1], n[0], n[1])

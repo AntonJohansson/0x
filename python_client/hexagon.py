@@ -48,12 +48,12 @@ class hexagon_bot:
         ## 4 ints per hex -> 16 bytes per hex
         ## 7 hexes per set
     
-        hex_sets = int(len(data)/(16*7))
+        hex_sets = int(len(data)/(4*4*7))
         for i in range(hex_sets):
-            h = self.unpack_hex(data, i*28*4)
+            h = self.unpack_hex(data, i*4*4*7)
             neighbour_list = []
             for j in range(6):
-                n = self.unpack_hex(data, (j+1)*4*4)
+                n = self.unpack_hex(data, i*4*4*7 + (j+1)*4*4)
                 neighbour_list.append(n)
             result.append([h, neighbour_list])
             #struct.unpack_from('>' + str(16*7) + 'i', data)
@@ -117,9 +117,9 @@ class hexagon_bot:
             length = struct.unpack_from('>I', data)[0]
             string = struct.unpack_from('>'+str(length)+'s', data, 4)[0]
             print("Error: " + string.decode('utf8'))
-            print("callstack-ish:\n" + self.turn_stack)
+            #print("callstack-ish:\n" + self.turn_stack)
             self.turn_stack = ""
-            exit()
+            #exit()
         elif packet_id == CONNECTED_TO_LOBBY:
             self.lobby_id = struct.unpack_from('>Q', data)[0]
             print("connected to lobby: {}".format(self.lobby_id))
