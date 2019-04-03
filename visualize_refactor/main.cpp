@@ -77,6 +77,7 @@ constexpr int32_t SCREEN_HEIGHT = 600;
 uint64_t lobby_id = 0;
 
 std::thread server_thread;
+std::mutex mutex;
 
 std::vector<std::string> sessions;
 sf::Text sessions_text;
@@ -94,8 +95,8 @@ struct Cell{
 };
 
 struct PlayerScores{
-	uint32_t player_id;
-	uint32_t player_resources;
+	uint32_t id;
+	uint32_t resources;
 };
 
 uint32_t current_turn = 0;
@@ -251,15 +252,23 @@ void receive_data(int s){
 			std::string message = decode::string(data);
 			printf("Error: %s\n", message.c_str());
 		}else if(packet_type == 2){ // OBSERVER MAP
+			//std::lock_guard<std::mutex> lock(mutex);
+
 			printf("received observer map\n");
 			map.clear();
 
 			decode::multiple_integers(data, map_radius, player_count, current_turn);
 
+			player_scores.clear();
 			for(uint32_t i = 0; i < player_count; i++){
 				uint32_t player_id, resources;
 				decode::multiple_integers(data, player_id, resources);
+				player_scores.push_back({player_id, resources});
 			}
+
+			std::sort(player_scores.begin(), player_scores.end(), [](const auto& a, const auto& b){
+						return a.resources > b.resources;
+					});
 
 			while(data.size() > data_left_size){
 				int32_t q;
@@ -374,12 +383,13 @@ int main(){
 	sessions_text.setPosition({50, 50});
 
 	stats_text.setFont(font);
-	stats_text.setCharacterSize(20);
+	stats_text.setCharacterSize(15);
 	stats_text.setFillColor(sf::Color::Black);
 	stats_text.setPosition({800-300, 50});
 
 	
 	while (window.isOpen()){
+		//std::lock_guard<std::mutex> lock(mutex);
 		sf::Event event;
 		while(window.pollEvent(event)){
 			if(event.type == sf::Event::Closed)
@@ -417,19 +427,42 @@ int main(){
 				sf::Color color = dark_color;
 				sf::Color	text = background_color;
 				if(player_id > 0){
-					int players = 2;
 					float l = 0.2f + fmin((float)resources, 0.6f*300.0f)/300.0f;
 					if(l > 0.5f){
 						text = dark_color;
 					}
 
-					auto [r,g,b] = hsl_to_rgb({player_id*360.0f/players, 0.5f, l});
+					auto [r,g,b] = hsl_to_rgb({player_id*360.0f/player_count, 0.5f, l});
 					color = sf::Color(255*r, 255*g, 255*b);
 				}
 
 				draw_cell(window, q, r, resources, player_id, color, text);
 			}
 		}
+
+		if(!player_scores.empty()){
+			sf::RectangleShape rect({10,10});
+
+			stats_text.setPosition({800-100, 50});
+			stats_text.setString("Scores");
+			window.draw(stats_text);
+
+			auto pos = stats_text.getPosition();
+			stats_text.setPosition(pos + sf::Vector2f{15,0});
+			for(auto& [id, score] : player_scores){
+				auto pos = stats_text.getPosition();
+				stats_text.setPosition(pos + sf::Vector2f{0,20});
+				stats_text.setString(std::to_string(id) + ": " + std::to_string(score));
+
+				auto [r,g,b] = hsl_to_rgb({id*360.0f/player_count, 0.5f, 0.5f});
+				auto color = sf::Color(255*r, 255*g, 255*b);
+				rect.setFillColor(color);
+				rect.setPosition(pos + sf::Vector2f{-15,20 + 10.0f/2}); 
+				window.draw(stats_text);
+				window.draw(rect);
+			}
+		}
+
 
 		window.draw(sessions_text);
 

@@ -11,5 +11,4 @@ Handle game rules correctly:
 Error handling in binary encoding
 	- at least dont crash...
 Restructure play/visualize
-
-
+colors switch when someone is eliminated

@@ -159,7 +159,12 @@ static void start_new_turn(Game& game){
 				}
 			});
 
-	player_data_callback(game.current_player->client_id, player_map);
+	// TODO I DONT THINK THIS IS NEEDED
+	if(!player_map.empty()){
+		player_data_callback(game.current_player->client_id, player_map);
+	}else{
+		// player got knocked out
+	}
 }
 
 
@@ -206,6 +211,13 @@ void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id){
 	if(auto game_found = active_games.at(lobby_id); game_found){
 		auto& game = *game_found;
 
+		//if(game.current_player->client_id == client_id){
+		//	printf("rtucxk\n");
+		//	if(++game.current_player == game.players.end()){
+		//		game.current_player = game.players.begin();
+		//	}
+		//}
+
 		game.observers.erase(std::remove(game.observers.begin(), game.observers.end(), lobby_id), game.observers.end());
 		game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){return info.client_id == client_id;}), game.players.end());
 
@@ -227,8 +239,22 @@ void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id){
 		if(auto lobby_found = active_lobbies.at(lobby_name); lobby_found){
 			auto& lobby = *lobby_found;
 
+			size_t before, after;
+			before = lobby.observers.size();
 			lobby.observers.erase(std::remove(lobby.observers.begin(), lobby.observers.end(), client_id), lobby.observers.end());
+			after  = lobby.observers.size();
+			if(before != after){
+				lobby.number_of_observers--;
+			}
+
+			before = lobby.players.size();
 			lobby.players.erase(std::remove(lobby.players.begin(), lobby.players.end(), client_id), lobby.players.end());
+			after  = lobby.players.size();
+			if(before != after){
+				lobby.number_of_players--;
+			}
+
+
 
 			if(lobby.players.empty() && lobby.observers.empty()){
 				printf("lobby empty, closing\n");
@@ -326,12 +352,12 @@ void poll(){
 				//printf("\r waiting on player: %i\n", game.current_player->client_id);
 
 				auto dur = std::chrono::high_resolution_clock::now() - game.current_player_begin_turn_time_point;
-				if(dur > std::chrono::milliseconds(1000)){
-					error_callback(game.current_player->client_id, "time limit crossed.");
-					start_new_turn(game);
-					// doing this delete fucks up every thing
-					//game.current_player = game.players.erase(game.current_player);
-				}
+				//if(dur > std::chrono::milliseconds(500)){
+				//	error_callback(game.current_player->client_id, "time limit crossed.");
+				//	start_new_turn(game);
+				//	// doing this delete fucks up every thing
+				//	//game.current_player = game.players.erase(game.current_player);
+				//}
 			});
 	
 	for(auto& request : commit_turn_request_queue){
@@ -377,6 +403,24 @@ void poll(){
 				cell_transfer_to.player_id = -1;
 			}
 
+			// TODO
+			// check for zero resource things
+			auto still_in_game = [](HexMap& map, ClientId id){
+				uint32_t tiles = 0;
+				hex_map::for_each(map, [&](auto& cell){
+							if(cell.player_id == id){
+								tiles++;
+								return;
+							}
+						});
+
+				return tiles;
+			};
+
+			game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){
+						return !still_in_game(*game.map, info.client_id);
+						}), game.players.end());
+			
 			start_new_turn(game);
 		}
 	}
