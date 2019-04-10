@@ -1,16 +1,35 @@
-Collect game and server statistics
-	- server bytes io/s
-	- meassure latency
-	- measure game update time
-Finish rewrite of network code
-	- ?
-Handle game rules correctly:
+GLOBAL:
+	- separate out common code for server/client to a library
+
+SERVER:
+	- I dont think were disconnecting from a game/lobby when we're joining
+	- bad socket handle when client disconnects
+	an other one
+	Error handling in binary encoding
+		- at least dont crash...
+	Handle game rules correctly:
 	- boosting requires non isolated region
 		- check this via path finding
 	- when transferring to enemy (natural as well?) cells, they have to be adjacent
-Error handling in binary encoding
-	- at least dont crash...
-Restructure play/visualize
-colors switch when someone is eliminated
-the way knockouts are handeled is really bad.
-	- has to do with way players are stored i think
+	Collect game and server statistics
+		- server bytes io/s
+		- meassure latency
+		- measure game update time
+	send deltas instead of whole map to observers
+	have some type of verification on turn commital:
+		otherwise one could just spam server with commands, which will fuck up the game state
+
+VISUALIZE:
+	colors switch when someone is eliminated
+	admin mode
+		- pause game
+		- force game state
+
+REFACTOR:
+	the way knockouts are handeled is really bad.
+		- has to do with way players are stored i think
+	separate network code in server
+
+PYTHON INTERFACE:
+	- you can call c-functions from native python, should I?
+		- https://stackoverflow.com/questions/145270/calling-c-c-from-python

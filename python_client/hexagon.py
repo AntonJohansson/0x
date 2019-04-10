@@ -69,12 +69,15 @@ class hexagon_bot:
         self.server.setblocking(1)
 
     def command(self, message):
-        self.server.send(bytes(message, 'utf8'))
+        header = struct.pack('>IB', len(message), COMMAND)
+        self.server.send(header + bytes(message,'utf8'))
 
     def submit_transaction(self, amount, q0,r0, q1,r1):
-        #print("sending transaction ({},{}) -{}-> {},{}".format(q0,r0,amount,q1,r1))
+        print("sending transaction ({},{}) -{}-> {},{}".format(q0,r0,amount,q1,r1))
         self.turn_stack += "\tsubmitting transaction {}: {},{} - {}-> {},{}\n".format(self.lobby_id, q0,r0,amount,q1,r1)
-        self.server.send(struct.pack('>BQIiiii', 3, self.lobby_id, amount, q0,r0, q1,r1))
+        payload = struct.pack('>QIiiii', self.lobby_id, amount, q0,r0, q1,r1)
+        header = struct.pack('>IB', len(payload), TURN_TRANSACTION);
+        self.server.send(header + payload)
 
     def handle_turn_data(self, map):
         print('You forgot to override handle_turn_data(...)')

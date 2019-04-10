@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "external/catch.hpp"
-#include "0x/hex.hpp"
+#include <game/hex.hpp>
 
 using namespace hex;
 

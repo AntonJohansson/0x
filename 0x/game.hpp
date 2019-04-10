@@ -1,19 +1,18 @@
 #pragma once
 
-#include "hash_map.hpp"
-#include "hex.hpp"
-#include "hex_map.hpp"
-#include "tcp/socket.hpp"
-#include "pool_allocator.hpp"
-#include "packet.hpp"
+#include <game/hex.hpp>
+#include <game/hex_map.hpp>
+#include <game/packet.hpp>
+#include <memory/hash_map.hpp>
+#include <memory/pool_allocator.hpp>
+#include <network/socket.hpp>
+#include <network/serialize_data.hpp>
 
 #include <string>
 #include <string_view>
 #include <vector>
 #include <algorithm>
 #include <chrono>
-
-#include "network/serialize_data.hpp"
 
 namespace game{
 

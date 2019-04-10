@@ -1,8 +1,10 @@
 #include "game_refactor.hpp"
-#include "hash_map.hpp"
-#include "hex_map.hpp"
-#include "murmur_hash3.hpp"
-#include "pool_allocator.hpp"
+
+#include <serialize/murmur_hash3.hpp>
+#include <memory/hash_map.hpp>
+#include <memory/pool_allocator.hpp>
+#include <game/hex_map.hpp>
+
 #include <stdio.h>
 #include <vector>
 #include <chrono>

@@ -68,17 +68,14 @@
 
 enum class PacketType{
 	INVALID = 0,
-	// output
 	SESSION_LIST,
 	OBSERVER_MAP,
 	PLAYER_MAP,
-	// input
 	COMMAND,
 	TURN_TRANSACTION,
 	ERROR_MESSAGE,
 	CONNECTED_TO_LOBBY,
-	ADMIN_PAUSE,
-	ADMIN_FORCE_GAME_STATE,
+	ADMIN_COMMAND
 };
 
 struct SessionList{
@@ -95,9 +92,10 @@ struct Command{
 };
 
 struct TurnTransaction{
-	int resource_amount = 0;
-	int q0 = 0, r0 = 0;
-	int q1 = 0, r1 = 0;
+	uint64_t lobby_id;
+	uint32_t resource_amount = 0;
+	int32_t q0 = 0, r0 = 0;
+	int32_t q1 = 0, r1 = 0;
 };
 
 struct AdminPause{
@@ -159,6 +157,35 @@ inline PacketUnion decode_packet(BinaryData& data){
 				printf("Unrecognized packet type %i!\n", packet_type);
 	}
 
+}
+
+struct PacketHeader{
+	size_t initial_size;
+	uint32_t payload_size;
+	PacketType packet_type;
+};
+
+inline PacketHeader decode_packet_header(BinaryData& data){
+	size_t initial_size = data.size();
+
+	uint32_t payload_size;
+	uint8_t packet_type;
+	decode::multiple_integers(data, payload_size, packet_type);
+
+	return {initial_size, payload_size, static_cast<PacketType>(packet_type)};
+}
+
+inline Command decode_command_packet(BinaryData& data, const PacketHeader& header){
+	return {std::string(data.begin(), data.end())};
+}
+
+inline TurnTransaction decode_transaction_packet(BinaryData& data, const PacketHeader& header){
+	uint64_t lobby_id;
+	int32_t q0, r0, q1, r1;
+	uint32_t resources;
+	decode::multiple_integers(data, lobby_id, resources, q0, r0, q1, r1);
+
+	return {lobby_id, resources, q0, r0, q1, r1};
 }
 
 inline void encode_error_message(BinaryData& data, const std::string& message){

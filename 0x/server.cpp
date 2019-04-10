@@ -1,16 +1,16 @@
-#include "server.hpp"
-#include "io/poll_set.hpp"
-#include "tcp/socket.hpp"
-#include "tcp/socket_connection.hpp"
-#include "game_refactor.hpp"
-#include "hash_map.hpp"
-#include "string_helper.hpp"
-#include "number_types.hpp"
-#include "network/binary_encoding.hpp"
-#include "network/serialize_data.hpp"
-#include "packet.hpp"
+#include <io/poll_set.hpp>
+#include <network/socket.hpp>
+#include <network/socket_connection.hpp>
+#include <memory/hash_map.hpp>
+#include <other/string_helper.hpp>
+#include <other/number_types.hpp>
+#include <serialize/binary_encoding.hpp>
+#include <serialize/serialize_data.hpp>
+#include <game/packet.hpp>
+#include <game/hex_map.hpp>
 
-#include "hex_map.hpp"
+#include "server.hpp"
+#include "game_refactor.hpp"
 
 #include <stdio.h>
 #include <thread>
@@ -190,124 +190,108 @@ static void handle_server_commands(){
 }
 
 void receive_client_data(int s){
-	static unsigned char buffer[1024];
-	auto bytes_received = tcp_socket::recv(s, buffer, 1024);
-	std::string_view sv(reinterpret_cast<char*>(buffer), bytes_received);
+	static uint8_t buffer[1024];
+	size_t bytes_received = tcp_socket::recv(s, buffer, 1024);
+	BinaryData data(buffer, buffer + bytes_received);
 
+
+	
+	printf("1\n");
 	if(auto connection_opt = connections.at(s)){
+		printf("2\n");
 		auto& connection = *connection_opt;
+		auto header = decode_packet_header(data);
+		switch(header.packet_type){
+			case PacketType::INVALID:
+				printf("3\n");
+				error_message_callback(s, "Invalid packet type.");
+				break;
+			case PacketType::OBSERVER_MAP:
+				printf("4\n");
+				//auto command_packet = decode_observer_map(data);
+				break;
+			case PacketType::COMMAND:{
+				printf("5\n");
+				auto [str] = decode_command_packet(data, header);
+				std::string_view sv(str);
 
-		//std::string_view sv = total_data;
-		if(compare_next_word(sv, "create_or_join") || compare_next_word(sv, "coj")){
-			// if we're already in a session, leave it
-			//if(connection.session_info.active){
-			//	game::disconnect_from_session(s, connection.session_info);
-			//}
+				if(compare_next_word(sv, "create_or_join") || compare_next_word(sv, "coj")){
+					auto player_mode_sv			= get_next_word(sv);
+					auto lobby_name_sv			= get_next_word(sv);
+					auto players_sv 				= get_next_word(sv);
+					auto radius_sv 					= get_next_word(sv);
+					auto restart_on_win_sv 	= get_next_word(sv);
 
-			std::cout << sv << std::endl;
-			auto player_mode_sv 		= get_next_word(sv);
-			std::cout << sv << std::endl;
-			auto lobby_name_sv			= get_next_word(sv);
-			std::cout << sv << std::endl;
-			auto players_sv 				= get_next_word(sv);
-			std::cout << sv << std::endl;
-			auto radius_sv 					= get_next_word(sv);
-			std::cout << sv << std::endl;
-			auto restart_on_win_sv 	= get_next_word(sv);
-			std::cout << sv << std::endl;
+					game::Settings settings;
 
-			game::Settings settings;
+					game::PlayerMode player_mode = game::NONE;
+					std::string lobby_name;
+					uint32_t players;
+					uint32_t radius;
+					bool restart_on_win;
 
-			game::PlayerMode player_mode = game::NONE;
-			std::string lobby_name;
-			uint32_t players;
-			uint32_t radius;
-			bool restart_on_win;
+					if(player_mode_sv.size() && lobby_name_sv.size()){
+						if(player_mode_sv.compare("observer") == 0 || player_mode_sv.compare("o") == 0){player_mode = game::OBSERVER;}
+						else if(player_mode_sv.compare("player") == 0 || player_mode_sv.compare("p") == 0){player_mode = game::PLAYER;}
+						else{
+							player_mode = game::OBSERVER;
+						}
 
-			if(player_mode_sv.size() && lobby_name_sv.size()){
-				if(player_mode_sv.compare("observer") == 0 || player_mode_sv.compare("o") == 0){player_mode = game::OBSERVER;}
-				else if(player_mode_sv.compare("player") == 0 || player_mode_sv.compare("p") == 0){player_mode = game::PLAYER;}
-				else{
-					player_mode = game::OBSERVER;
+						settings.name = std::string(lobby_name_sv);
+					}
+
+					if(players_sv.size() && to_number(players_sv, players)){
+						settings.max_number_of_players = players;
+					}else{
+						settings.max_number_of_players = 6;
+					}
+
+					if(radius_sv.size() && to_number(radius_sv, radius)){
+						settings.map_radius = radius;
+					}else{
+						settings.map_radius = 3;
+					}
+
+					if(restart_on_win_sv.size()){
+						if(restart_on_win_sv.compare("true") == 0){
+							settings.restart_on_win = true;
+						}else{
+							settings.restart_on_win = false;
+						}
+					}
+
+					game::create_or_join_lobby(s, player_mode, settings);
+				}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
+					BinaryData data;
+					// TODO: might not be thread safe
+					for(auto& lobby : game::get_lobby_list()){
+						encode::string(data, lobby);
+					}
+
+					encode_packet(data, PacketType::SESSION_LIST);
+					tcp_socket::send_all(s, data.data(), data.size());
 				}
+				break;
 
-				settings.name = std::string(lobby_name_sv);
 			}
-			
-			if(players_sv.size() && to_number(players_sv, players)){
-				settings.max_number_of_players = players;
-			}else{
-				settings.max_number_of_players = 6;
-			}
-
-			if(radius_sv.size() && to_number(radius_sv, radius)){
-				settings.map_radius = radius;
-			}else{
-				settings.map_radius = 3;
-			}
-
-			if(restart_on_win_sv.size()){
-				if(restart_on_win_sv.compare("true") == 0){
-					settings.restart_on_win = true;
-				}else{
-					settings.restart_on_win = false;
-				}
-			}
-
-
-			//connection.session_info = game::create_or_join_session(s, player_mode, name_str, max_players);
-			game::create_or_join_lobby(s, player_mode, settings);
-	}else if(compare_next_word(sv, "list_sessions") || compare_next_word(sv, "ls")){
-		BinaryData data;
-		// TODO: might not be thread safe
-		for(auto& lobby : game::get_lobby_list()){
-			encode::string(data, lobby);
-		}
-
-		encode_packet(data, PacketType::SESSION_LIST);
-			tcp_socket::send_all(s, data.data(), data.size());
-
-			//if(game::active_sessions.size()){
-			//	BinaryData data;
-
-			//	game::active_sessions.for_each([&](auto& pair){
-			//			auto& session = pair.value;
-			//			encode::string(data, session.name);
-			//			});
-
-			//	encode_packet(data, PacketType::SESSION_LIST);
-			//	printf("session list data size %zu\n", data.size());
-			//	tcp_socket::send_all(s, &data[0], data.size());
-			//}
-		}else{
-			// transactions
-			uint8_t packet_id = 0;
-			BinaryData data(buffer, buffer + bytes_received);
-			decode::integer(data, packet_id);
-
-			uint64_t lobby_id;
-			decode::integer(data, lobby_id);
-
-			if(packet_id == 3){
-				int32_t q0, r0, q1, r1;
-				uint32_t res;
-				decode::multiple_integers(data, res, q0, r0, q1, r1);
-				//printf("received transaction (%i,%i) -%i-> (%i,%i)\n", q0,r0,res,q1,r1);
-				//printf("\treceived transaction from %i\n", s);
-				
-
+			case PacketType::TURN_TRANSACTION:{
+				auto [lobby_id,res,q0,r0,q1,r1] = decode_transaction_packet(data, header);
+				std::cout 
+					<< lobby_id << " " 
+					<< res << " "
+					<< q0 << " "
+					<< r0 << " "
+					<< q1 << " "
+					<< r1 << "\n";
 				game::commit_player_turn(lobby_id, res, q0, r0, q1, r1);
-
-				//if(auto game_found = game::active_games.at(connection.session_info.name)){
-				//	auto& game = *game_found;
-
-				//	game::complete_turn(game, res, q0, r0, q1, r1);
-				//	if(auto session_found = game::active_sessions.at(connection.session_info.name); session_found){
-				//		auto& session = *session_found;
-				//		game::do_turn(session, game);
-				//	}
-				//}
 			}
+				break;
+			case PacketType::ADMIN_COMMAND:
+				//auto transaction_packet = decode_command_packet(data);
+				break;
+			default:
+				error_message_callback(s, "Unknown packet type " + std::to_string(static_cast<int>(header.packet_type)));
+				break;
 		}
 	}
 }

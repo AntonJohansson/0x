@@ -14,15 +14,23 @@
 #include <mutex>
 #include <algorithm>
 
-#include "hex.hpp"
-#include "tcp/socket.hpp"
-#include "tcp/socket_connection.hpp"
-#include "io/poll_set.hpp"
-#include "network/binary_encoding.hpp"
-#include "../0x/crc/crc32.hpp"
+#include <game/hex.hpp>
+#include <network/socket.hpp>
+#include <network/socket_connection.hpp>
+#include <io/poll_set.hpp>
+#include <serialize/binary_encoding.hpp>
+#include <crc/crc32.hpp>
 
 
 
+
+constexpr float pi_over_six = M_PI/6.0f;
+constexpr float hex_size = 10.0f;
+// 0.866025403784438646763723170752936183471402626905190314
+constexpr float hex_width = 2*0.866025403784438646763723170752936183471402626905190314f*hex_size;
+
+constexpr int32_t SCREEN_WIDTH  = 800;
+constexpr int32_t SCREEN_HEIGHT = 600;
 
 
 
@@ -37,6 +45,59 @@ RGB hsl_to_rgb(HSL hsl){
 	};
 
 	return {f(hsl, 0), f(hsl, 8), f(hsl, 4)};
+}
+
+
+
+
+static hex::AxialVec hex_round(int q, int r){
+	auto cube = hex::axial_to_cube({q, r});
+
+	auto rx = std::round(cube.x);
+	auto ry = std::round(cube.y);
+	auto rz = std::round(cube.z);
+
+	auto x_diff = std::abs(rx - cube.x);
+	auto y_diff = std::abs(ry - cube.y);
+	auto z_diff = std::abs(rz - cube.z);
+
+	if(x_diff > y_diff && x_diff > z_diff){
+		rx = -ry - rz;
+	}else if(y_diff > z_diff){
+		ry = -rx - rz;
+	}else{
+		rz = -rx - ry;
+	}
+
+	return hex::cube_to_axial({x_diff, y_diff, z_diff});
+}
+
+static hex::AxialVec from_screen(int x, int y){
+	y = SCREEN_HEIGHT - y;
+	y -= SCREEN_HEIGHT/2.0f;
+	x -= SCREEN_WIDTH/2.0f;
+	x /= 1.05f;
+	y /= 1.05f;
+
+	int q = (sqrt(3)/3.0*x - 	1.0/3*y)/hex_size;
+	int r = (									2.0/3*y)/hex_size;
+	return hex_round(q, r);
+}
+
+
+
+
+static std::pair<float, float> to_screen(int q, int r){
+	//const float y1 = cos(pi_over_six)*cos(pi_over_six*4);
+	//const float y2 = cos(pi_over_six)*sin(pi_over_six*4);
+	// cos(pi/6)  = 0.866025403784438646763723170752936183471402626905190314
+	// cos(4pi/6) = -0.5
+	// sin(4pi/6) = 0.866025403784438646763723170752936183471402626905190314
+	constexpr float x1 = 1.0f;
+	constexpr float x2 = 0.0f;
+	constexpr float y1 = 0.8660254f*(-0.5f);
+	constexpr float y2 = 0.8660254f*0.8660254;
+	return {r*2*hex_size*y1 + q*hex_width*x1, r*2*hex_size*y2};
 }
 
 
@@ -64,15 +125,6 @@ RGB hsl_to_rgb(HSL hsl){
 
 
 
-
-
-
-
-
-
-
-constexpr int32_t SCREEN_WIDTH  = 800;
-constexpr int32_t SCREEN_HEIGHT = 600;
 
 uint64_t lobby_id = 0;
 
@@ -109,7 +161,7 @@ void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Co
 	vertices[0] = sf::Vertex({x,y}, color);
 
 	for(int i = 0; i < 7; i++){
-		vertices[i+1] = sf::Vertex({x+size*cos(axial::pi_over_six+2*axial::pi_over_six*i), y+size*sin(axial::pi_over_six+2*axial::pi_over_six*i)}, color);
+		vertices[i+1] = sf::Vertex({x+size*cos(pi_over_six+2*pi_over_six*i), y+size*sin(pi_over_six+2*pi_over_six*i)}, color);
 	}
 
 	window.draw(&vertices[0], 8, sf::TriangleFan);
@@ -118,7 +170,7 @@ void draw_hexagon(sf::RenderWindow& window, float size, float x, float y, sf::Co
 void draw_cell(sf::RenderWindow& window, int q, int r, int  resources, int player_id, sf::Color color, sf::Color text_color){
 	text.setFillColor(text_color);
 
-	auto [x, y] = axial::to_screen(q,r);
+	auto [x, y] = to_screen(q,r);
 	x *= 1.05f;
 	y *= 1.05f;
 	x += SCREEN_WIDTH/2.0f;
@@ -204,21 +256,18 @@ void input_loop(PollSet& set){
 }
 
 void receive_data(int s){
-	Socket socket(s, "0.0.0.0");
+	BinaryData data;
 
+	constexpr size_t size = 100;
+	uint8_t buffer[size];
+	size_t bytes;
 	// Receive all data
 	std::string total_data;
 	std::string incoming_data;
-	while(true){
-		incoming_data = socket.recv();
-		if(incoming_data.empty()) break;
 
-		total_data += incoming_data;
+	while(bytes = tcp_socket::recv(s, buffer, size)){
+		append(data, buffer, bytes);
 	}
-
-
-	BinaryData data(total_data.begin(), total_data.end());
-	//printf("received data of size %lu\n", data.size());
 
 	// handle packet
 	while(!data.empty()){
@@ -290,16 +339,17 @@ void receive_data(int s){
 
 void reconnect(Socket& socket, PollSet& set){
 	while(!connected_to_server){ 
-		if(socket = client_bind("127.0.0.1", "1111"); socket.handle != Socket::INVALID){
-			socket.set_nonblocking();
+		if(socket = client_bind("127.0.0.1", "1111"); socket != tcp_socket::INVALID){
+			tcp_socket::set_nonblocking(socket);
+tcp:
 			//socket.send_all("coj observer hej 1");
 			connected_to_server = true;
 			printf("Connected to server!\n");
 
-			set.add(socket.handle, receive_data);
+			set.add(socket, receive_data);
 
 			// handle server disconnect
-			set.on_disconnect(socket.handle, [&](int){
+			set.on_disconnect(socket, [&](int){
 					connected_to_server = false;
 					printf("Server disconnected!\n");
 					});
@@ -405,7 +455,7 @@ int main(){
 						toggle_hex_positions = !toggle_hex_positions;
 						break;
 					case sf::Keyboard::R:
-						socket.send_all("ls");
+						tcp_socket::send(socket, "ls");
 						break;
 					case sf::Keyboard::Z:
 						transfer_amount++;
@@ -413,11 +463,11 @@ int main(){
 					case sf::Keyboard::X:
 						transfer_amount--;
 						break;
-					case sf::Keyboard::Num1: if(sessions.size() > 0){socket.send_all("coj p " + sessions[0] + " 1");} break;
-					case sf::Keyboard::Num2: if(sessions.size() > 1){socket.send_all("coj p " + sessions[1] + " 1");} break;
-					case sf::Keyboard::Num3: if(sessions.size() > 2){socket.send_all("coj p " + sessions[2] + " 1");} break;
-					case sf::Keyboard::Num4: if(sessions.size() > 3){socket.send_all("coj p " + sessions[3] + " 1");} break;
-					case sf::Keyboard::Num5: if(sessions.size() > 4){socket.send_all("coj p " + sessions[4] + " 1");} break;
+					case sf::Keyboard::Num1: if(sessions.size() > 0){tcp_socket::send_all(socket, "coj p " + sessions[1] + " 1");} break;
+					case sf::Keyboard::Num2: if(sessions.size() > 1){tcp_socket::send_all(socket, "coj p " + sessions[2] + " 1");} break;
+					case sf::Keyboard::Num3: if(sessions.size() > 2){tcp_socket::send_all(socket, "coj p " + sessions[3] + " 1");} break;
+					case sf::Keyboard::Num4: if(sessions.size() > 3){tcp_socket::send_all(socket, "coj p " + sessions[4] + " 1");} break;
+					case sf::Keyboard::Num5: if(sessions.size() > 4){tcp_socket::send_all(socket, "coj p " + sessions[5] + " 1");} break;
 				}
 			}else if(event.type == sf::Event::MouseButtonPressed){
 				if(doing_transfer){
@@ -430,7 +480,7 @@ int main(){
 					encode::u32(data, m1.x);
 					encode::u32(data, m1.y);
 					auto str = std::string(data.begin(), data.end());
-					socket.send_all(str);
+					tcp_socket::send_all(socket, str);
 					my_turn = false;
 					sessions_text.setString(std::to_string(my_turn));
 					doing_transfer = false;
@@ -442,10 +492,12 @@ int main(){
 
 		if(doing_transfer){
 			m1 = sf::Mouse::getPosition(window);
-			std::tie(m1.x, m1.y) = axial::closest_hex(m1.x, m1.y);
+			auto [x, y] = from_screen(m1.x, m1.y);
+			m1.x = x; m1.y = y;
 		}else{
 			m0 = sf::Mouse::getPosition(window);
-			std::tie(m0.x, m0.y) = axial::closest_hex(m0.x, m0.y);
+			auto [x, y] = from_screen(m0.x, m0.y);
+			m0.x = x; m0.y = y;
 		}
 
 

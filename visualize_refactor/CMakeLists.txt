@@ -1,16 +1,22 @@
 set(PROJECT visualize_refactor)
 set(SOURCES
-	tcp/socket.cpp
-	tcp/socket_connection.cpp
-	hex.cpp
 	main.cpp
 	)
+
+
+project(${PROJECT})
+add_executable(${PROJECT} ${SOURCES})
 
 set(CMAKE_MODULE_PATH "/usr/local/share/SFML/cmake/Modules")
 find_package(SFML 2 COMPONENTS network graphics window system)
 
-project(${PROJECT})
-add_executable(${PROJECT} ${SOURCES})
+find_library(library_location NAMES liblibrary.so HINTS ${CMAKE_BINARY_DIR}/library)
+add_library(library0x SHARED IMPORTED)
+set_target_properties(library0x PROPERTIES IMPORTED_LOCATION ${library_location})
+
+target_include_directories(${PROJECT} PUBLIC 
+	${CMAKE_BINARY_DIR}/library/
+	)
 
 target_compile_options(${PROJECT} PRIVATE
 	-std=c++1z -g
@@ -21,7 +27,7 @@ include_directories(${SFML_INCLUDE_DIR})
 if(UNIX AND NOT APPLE)
 	# unix
 	target_link_libraries(${PROJECT}
-		sfml-graphics sfml-window sfml-system pthread
+		library0x sfml-graphics sfml-window sfml-system pthread
 		)
 elseif(APPLE)
 	# mac

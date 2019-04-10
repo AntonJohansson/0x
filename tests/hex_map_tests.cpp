@@ -1,5 +1,5 @@
 #include "external/catch.hpp"
-#include "0x/hex_map.hpp"
+#include <game/hex_map.hpp>
 #include <iostream>
 
 TEST_CASE("midpoints", "[hex_map]"){

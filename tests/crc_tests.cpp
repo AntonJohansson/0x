@@ -1,5 +1,5 @@
 #include "external/catch.hpp"
-#include "0x/crc/crc32.hpp"
+#include <crc/crc32.hpp>
 
 TEST_CASE("crc(1234567989)", "[crc]"){
 	char* buffer = "123456789";
