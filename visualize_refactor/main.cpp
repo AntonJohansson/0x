@@ -102,6 +102,7 @@ struct PlayerScores{
 uint32_t current_turn = 0;
 uint32_t map_radius = 0;
 uint32_t player_count = 0;
+uint32_t max_players = 0;
 std::vector<Cell> map;
 std::vector<Cell> tmp_map;
 std::vector<PlayerScores> player_scores;
@@ -145,24 +146,24 @@ void draw_cell(sf::RenderWindow& window, int q, int r, int  resources, int playe
 
 	draw_hexagon(window, hex_size, x, y, color);
 
-	// Debug draw text
-	if(toggle_hex_positions){
-		text.setString(std::to_string(q) + ", " + std::to_string(r) + "\n  " + std::to_string(player_id));
-		text.setPosition(x, y);
+	//// Debug draw text
+	//if(toggle_hex_positions){
+	//	text.setString(std::to_string(q) + ", " + std::to_string(r) + "\n  " + std::to_string(player_id));
+	//	text.setPosition(x, y);
 
-		auto text_rect = text.getLocalBounds();
-		text.setOrigin(text_rect.left + text_rect.width/2.0f,
-				text_rect.top  + text_rect.height/2.0f);
-		window.draw(text);
-	}else{
-		text.setString(std::to_string(resources));
-		text.setPosition(x, y);
+	//	auto text_rect = text.getLocalBounds();
+	//	text.setOrigin(text_rect.left + text_rect.width/2.0f,
+	//			text_rect.top  + text_rect.height/2.0f);
+	//	window.draw(text);
+	//}else{
+	//	text.setString(std::to_string(resources));
+	//	text.setPosition(x, y);
 
-		auto text_rect = text.getLocalBounds();
-		text.setOrigin(text_rect.left + text_rect.width/2.0f,
-				text_rect.top  + text_rect.height/2.0f);
-		window.draw(text);
-	}
+	//	auto text_rect = text.getLocalBounds();
+	//	text.setOrigin(text_rect.left + text_rect.width/2.0f,
+	//			text_rect.top  + text_rect.height/2.0f);
+	//	window.draw(text);
+	//}
 
 }
 
@@ -249,7 +250,7 @@ void receive_data(int s){
 		uint32_t crc = 0;
 		decode::integer(data, crc);
 
-		printf("total data size received: %u\nheader:\n\tpacket_size: %u\n\tpacket_id: %u\n", total_data_size, packet_size, packet_type);
+		//printf("total data size received: %u\nheader:\n\tpacket_size: %u\n\tpacket_id: %u\n", total_data_size, packet_size, packet_type);
 
 		uint32_t payload_crc = buffer_crc32(data.data(), packet_size);
 		if(crc != payload_crc){
@@ -275,7 +276,7 @@ void receive_data(int s){
 			printf("received observer map\n");
 			tmp_map.clear();
 
-			decode::multiple_integers(data, map_radius, player_count, current_turn);
+			decode::multiple_integers(data, map_radius, player_count, max_players, current_turn);
 
 			player_scores.clear();
 			for(uint32_t i = 0; i < player_count; i++){
@@ -455,7 +456,7 @@ int main(){
 						text = dark_color;
 					}
 
-					auto [r,g,b] = hsl_to_rgb({player_id*360.0f/player_count, 0.5f, l});
+					auto [r,g,b] = hsl_to_rgb({player_id*360.0f/max_players, 0.5f, l});
 					color = sf::Color(255*r, 255*g, 255*b);
 				}
 
@@ -477,7 +478,7 @@ int main(){
 				stats_text.setPosition(pos + sf::Vector2f{0,20});
 				stats_text.setString(std::to_string(id) + ": " + std::to_string(score));
 
-				auto [r,g,b] = hsl_to_rgb({id*360.0f/player_count, 0.5f, 0.5f});
+				auto [r,g,b] = hsl_to_rgb({id*360.0f/max_players, 0.5f, 0.5f});
 				auto color = sf::Color(255*r, 255*g, 255*b);
 				rect.setFillColor(color);
 				rect.setPosition(pos + sf::Vector2f{-15,20 + 10.0f/2}); 

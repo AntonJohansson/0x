@@ -40,11 +40,12 @@ namespace{
 static void observer_data_callback(game::ClientId client_id, 
 		uint32_t map_radius, 
 		uint32_t player_count,
+		uint32_t max_players,
 		uint32_t current_turn,
 		std::vector<game::PlayerScores> player_scores,
 		std::vector<const HexCell*> map){
 	BinaryData data;
-	encode::multiple_integers(data, map_radius, player_count, current_turn);
+	encode::multiple_integers(data, map_radius, player_count, max_players, current_turn);
 
 	for(auto& [id, score] : player_scores){
 		encode::multiple_integers(data, id, score);
@@ -196,22 +197,17 @@ void receive_client_data(int s){
 
 
 	
-	printf("1\n");
 	if(auto connection_opt = connections.at(s)){
-		printf("2\n");
 		auto& connection = *connection_opt;
 		auto header = decode_packet_header(data);
 		switch(header.packet_type){
 			case PacketType::INVALID:
-				printf("3\n");
 				error_message_callback(s, "Invalid packet type.");
 				break;
 			case PacketType::OBSERVER_MAP:
-				printf("4\n");
 				//auto command_packet = decode_observer_map(data);
 				break;
 			case PacketType::COMMAND:{
-				printf("5\n");
 				auto [str] = decode_command_packet(data, header);
 				std::string_view sv(str);
 
@@ -276,13 +272,6 @@ void receive_client_data(int s){
 			}
 			case PacketType::TURN_TRANSACTION:{
 				auto [lobby_id,res,q0,r0,q1,r1] = decode_transaction_packet(data, header);
-				std::cout 
-					<< lobby_id << " " 
-					<< res << " "
-					<< q0 << " "
-					<< r0 << " "
-					<< q1 << " "
-					<< r1 << "\n";
 				game::commit_player_turn(lobby_id, res, q0, r0, q1, r1);
 			}
 				break;

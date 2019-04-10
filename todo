@@ -1,5 +1,7 @@
 GLOBAL:
 	- separate out common code for server/client to a library
+	- rename 0x -> server, visualize_refactor -> admin_client, library -> ?
+	- merge visualize_refactor, play
 
 SERVER:
 	- I dont think were disconnecting from a game/lobby when we're joining
@@ -18,9 +20,10 @@ SERVER:
 	send deltas instead of whole map to observers
 	have some type of verification on turn commital:
 		otherwise one could just spam server with commands, which will fuck up the game state
+	game slows down after restart
+	send statistics when game ends
 
 VISUALIZE:
-	colors switch when someone is eliminated
 	admin mode
 		- pause game
 		- force game state
@@ -28,7 +31,6 @@ VISUALIZE:
 REFACTOR:
 	the way knockouts are handeled is really bad.
 		- has to do with way players are stored i think
-	separate network code in server
 
 PYTHON INTERFACE:
 	- you can call c-functions from native python, should I?

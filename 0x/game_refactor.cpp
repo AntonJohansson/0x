@@ -53,6 +53,7 @@ struct Game{
 	bool restart_on_win = false;
 
 	uint32_t current_turn = 0;
+	uint32_t max_players = 0;
 
 	std::vector<ClientId> observers;
 	std::vector<PlayerInfo> players;
@@ -97,12 +98,13 @@ static bool valid_lobby_request(const Lobby& lobby, const LobbyRequest& request)
 
 static void send_observer_data(Game& game, const std::vector<ClientId>& observers){
 	// TODO: this is ridicoulus
-	uint32_t radius, player_count, current_turn;
+	uint32_t radius, player_count, max_players, current_turn;
 	std::vector<PlayerScores> player_scores;
 	std::vector<const HexCell*> map;
 
 	radius = game.map->radius;
 	player_count = game.players.size();
+	max_players = game.max_players;
 	current_turn = game.current_turn;
 
 	HashMap<ClientId, uint32_t> resources;
@@ -119,7 +121,7 @@ static void send_observer_data(Game& game, const std::vector<ClientId>& observer
 			});
 
 	for(auto& id : observers){
-		observer_data_callback(id, radius, player_count, current_turn, player_scores, map);
+		observer_data_callback(id, radius, player_count, max_players, current_turn, player_scores, map);
 	}
 }
 
@@ -191,6 +193,7 @@ static void start_game(Lobby& lobby){
 	auto& game = active_games[lobby.id];
 	game.map = hex_map_allocator.alloc(lobby.settings.map_radius, lobby.settings.max_number_of_players,lobby.players);
 
+	game.max_players = lobby.number_of_players;
 	game.restart_on_win = lobby.settings.restart_on_win;
 	printf("restart: %i\n", (int)game.restart_on_win);
 

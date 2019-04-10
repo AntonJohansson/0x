@@ -57,6 +57,7 @@ using ErrorCallbackFunc = void(*)(ClientId, const std::string&);
 using ObserverDataCallbackFunc = void(*)(ClientId, 
 		uint32_t map_radius, 
 		uint32_t player_count,
+		uint32_t max_players,
 		uint32_t current_turn,
 		std::vector<PlayerScores> player_scores,
 		std::vector<const HexCell*> map
