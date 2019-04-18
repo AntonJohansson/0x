@@ -231,7 +231,7 @@ void disconnect_from_lobby(game::ClientId client_id, game::LobbyId lobby_id){
 		//	}
 		//}
 
-		game.observers.erase(std::remove(game.observers.begin(), game.observers.end(), lobby_id), game.observers.end());
+		game.observers.erase(std::remove(game.observers.begin(), game.observers.end(), client_id), game.observers.end());
 		game.players.erase(std::remove_if(game.players.begin(), game.players.end(), [&](auto& info){return info.client_id == client_id;}), game.players.end());
 
 		if(game.players.empty()){
