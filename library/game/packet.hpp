@@ -163,16 +163,30 @@ struct PacketHeader{
 	size_t initial_size;
 	uint32_t payload_size;
 	PacketType packet_type;
+	bool valid = false;
 };
 
-inline PacketHeader decode_packet_header(BinaryData& data){
+inline PacketHeader decode_packet_header(BinaryData& data, bool crc_check = false){
 	size_t initial_size = data.size();
 
 	uint32_t payload_size;
 	uint8_t packet_type;
-	decode::multiple_integers(data, payload_size, packet_type);
+	bool valid = true;
+	if(crc_check){
+		uint32_t crc;
+		decode::multiple_integers(data, payload_size, packet_type, crc);
 
-	return {initial_size, payload_size, static_cast<PacketType>(packet_type)};
+		uint32_t payload_crc = buffer_crc32(data.data(), payload_size);
+		if(crc != payload_crc){
+			printf("CRC mismatch (%x != %0x)!\n", crc, payload_crc);
+			printf("\tdecoded payload size: %u\n,\tactual data size: %zu\n", payload_size, data.size());
+			valid = false;
+		}
+	}else{
+		decode::multiple_integers(data, payload_size, packet_type);
+	}
+
+	return {initial_size, payload_size, static_cast<PacketType>(packet_type), valid};
 }
 
 inline Command decode_command_packet(BinaryData& data, const PacketHeader& header){

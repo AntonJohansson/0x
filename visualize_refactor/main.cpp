@@ -20,6 +20,10 @@
 #include <io/poll_set.hpp>
 #include <serialize/binary_encoding.hpp>
 #include <crc/crc32.hpp>
+#include <game/packet.hpp>
+
+#include "ui.hpp"
+#include "states.hpp"
 
 constexpr float pi_over_six = M_PI/6.0f;
 constexpr float hex_size = 10.0f;
@@ -74,6 +78,10 @@ RGB hsl_to_rgb(HSL hsl){
 constexpr int32_t SCREEN_WIDTH  = 800;
 constexpr int32_t SCREEN_HEIGHT = 600;
 
+sf::Font font;
+static sf::Color dark_color{47,47,47};
+static sf::Color background_color{244,240,219};
+
 uint64_t lobby_id = 0;
 
 std::thread server_thread;
@@ -108,7 +116,6 @@ std::vector<Cell> tmp_map;
 std::vector<PlayerScores> player_scores;
 
 bool connected_to_server = false;
-
 
 static std::pair<float, float> to_screen(int q, int r){
 	//const float y1 = cos(pi_over_six)*cos(pi_over_six*4);
@@ -236,81 +243,135 @@ void receive_data(int s){
 	while(!data.empty()){
 		uint32_t total_data_size = data.size();
 		uint32_t packet_size;
-		
-		// DECODE PACKET ID
-		decode::integer(data, packet_size);
 
-		assert(packet_size <= data.size());
+		auto header = decode_packet_header(data, true);
+		if(!header.valid)
+			continue;
+		
+		//// DECODE PACKET ID
+		//decode::integer(data, packet_size);
+
+		//assert(packet_size <= data.size());
 
 		// DECODE PACKET TYPE
-		uint8_t packet_type = 0;
-		decode::integer(data, packet_type);
+		//uint8_t packet_type = 0;
+		//decode::integer(data, packet_type);
 
-		// DECODE CRC
-		uint32_t crc = 0;
-		decode::integer(data, crc);
+		//// DECODE CRC
+		//uint32_t crc = 0;
+		//decode::integer(data, crc);
 
 		//printf("total data size received: %u\nheader:\n\tpacket_size: %u\n\tpacket_id: %u\n", total_data_size, packet_size, packet_type);
 
-		uint32_t payload_crc = buffer_crc32(data.data(), packet_size);
-		if(crc != payload_crc){
-			printf("CRC mismatch (%x != %0x)!\n", crc, payload_crc);
+		//uint32_t payload_crc = buffer_crc32(data.data(), packet_size);
+		//if(crc != payload_crc){
+		//	printf("CRC mismatch (%x != %0x)!\n", crc, payload_crc);
+		//}
+		uint32_t data_left_size = data.size() - header.payload_size;
+		switch(header.packet_type){
+			case PacketType::SESSION_LIST:{
+					std::string session_name, text_string;
+					sessions.clear();
+					while(data.size() > data_left_size){
+						session_name = decode::string(data);
+						sessions.push_back(session_name);
+						text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
+					}
+					sessions_text.setString(text_string);
+					break;
+				}
+			case PacketType::ERROR_MESSAGE:{
+					std::string message = decode::string(data);
+					printf("Error: %s\n", message.c_str());
+					break;
+				}
+			case PacketType::OBSERVER_MAP:{
+					printf("received observer map\n");
+					tmp_map.clear();
+
+					decode::multiple_integers(data, map_radius, player_count, max_players, current_turn);
+
+					player_scores.clear();
+					for(uint32_t i = 0; i < player_count; i++){
+						uint32_t player_id, resources;
+						decode::multiple_integers(data, player_id, resources);
+						player_scores.push_back({player_id, resources});
+					}
+
+					std::sort(player_scores.begin(), player_scores.end(), [](const auto& a, const auto& b){
+							return a.resources > b.resources;
+							});
+
+					while(data.size() > data_left_size){
+						int32_t q;
+						int32_t r;
+						int32_t player_id;
+						uint32_t resources;
+
+						decode::multiple_integers(data, q, r, player_id, resources);
+						tmp_map.push_back(Cell{q,r,resources,player_id});
+					}
+
+					map = tmp_map;
+
+					break;
+				}
+			case PacketType::CONNECTED_TO_LOBBY:{
+					decode::integer(data, lobby_id);
+					break;
+				}
 		}
 
-		uint32_t data_left_size = data.size() - packet_size;
-		if(packet_type == 1){ // LIST
-			std::string session_name, text_string;
-			sessions.clear();
-			while(data.size() > data_left_size){
-				session_name = decode::string(data);
-				sessions.push_back(session_name);
-				text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
-			}
-			sessions_text.setString(text_string);
-		}else if(packet_type == 6){
-			std::string message = decode::string(data);
-			printf("Error: %s\n", message.c_str());
-		}else if(packet_type == 2){ // OBSERVER MAP
-			//std::lock_guard<std::mutex> lock(mutex);
+		//if(packet_type == 1){ // LIST
+		//	std::string session_name, text_string;
+		//	sessions.clear();
+		//	while(data.size() > data_left_size){
+		//		session_name = decode::string(data);
+		//		sessions.push_back(session_name);
+		//		text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
+		//	}
+		//	sessions_text.setString(text_string);
+		//}else if(packet_type == 6){
+		//std::string message = decode::string(data);
+		//printf("Error: %s\n", message.c_str());
+		//}else if(packet_type == 2){ // OBSERVER MAP
+		//std::lock_guard<std::mutex> lock(mutex);
 
-			printf("received observer map\n");
-			tmp_map.clear();
+		//printf("received observer map\n");
+		//tmp_map.clear();
 
-			decode::multiple_integers(data, map_radius, player_count, max_players, current_turn);
+		//decode::multiple_integers(data, map_radius, player_count, max_players, current_turn);
 
-			player_scores.clear();
-			for(uint32_t i = 0; i < player_count; i++){
-				uint32_t player_id, resources;
-				decode::multiple_integers(data, player_id, resources);
-				player_scores.push_back({player_id, resources});
-			}
+		//player_scores.clear();
+		//for(uint32_t i = 0; i < player_count; i++){
+		//	uint32_t player_id, resources;
+		//	decode::multiple_integers(data, player_id, resources);
+		//	player_scores.push_back({player_id, resources});
+		//}
 
-			std::sort(player_scores.begin(), player_scores.end(), [](const auto& a, const auto& b){
-						return a.resources > b.resources;
-					});
+		//std::sort(player_scores.begin(), player_scores.end(), [](const auto& a, const auto& b){
+		//		return a.resources > b.resources;
+		//		});
 
-			while(data.size() > data_left_size){
-				int32_t q;
-				int32_t r;
-				int32_t player_id;
-				uint32_t resources;
+		//while(data.size() > data_left_size){
+		//		int32_t q;
+		//		int32_t r;
+		//		int32_t player_id;
+		//		uint32_t resources;
 
-				decode::multiple_integers(data, q, r, player_id, resources);
-				tmp_map.push_back(Cell{q,r,resources,player_id});
-			}
+		//		decode::multiple_integers(data, q, r, player_id, resources);
+		//		tmp_map.push_back(Cell{q,r,resources,player_id});
+		//	}
 
-			map = tmp_map;
-		}else if(packet_type == 7){
-			decode::integer(data, lobby_id);
-		}else if(packet_type == 6){
-			auto str = decode::string(data);
-			std::cout << "Error: " << str << std::endl;
-		}
+		//	map = tmp_map;
+		//}else if(packet_type == 7){
+		//	decode::integer(data, lobby_id);
+		//}
 	}
 }
 
-void reconnect(Socket& socket, PollSet& set){
-	while(!connected_to_server){ 
+void connect_to_server(Socket& socket, PollSet& set){
+	for(int i = 0; i < 5; i++){
 		if(socket = client_bind("127.0.0.1", "1111"); socket != tcp_socket::INVALID){
 			tcp_socket::set_nonblocking(socket);
 
@@ -323,14 +384,22 @@ void reconnect(Socket& socket, PollSet& set){
 			set.on_disconnect(socket, [&](int){
 					connected_to_server = false;
 					printf("Server disconnected!\n");
+					state::change("connect");
 					});
 
-			input_loop(set);
+			break;
 		}else{
 			printf("Reconnecting!\n");
 		}
-
+		
 		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+
+	if(connected_to_server){
+		state::change("main menu");
+		input_loop(set);
+	}else{
+		state::change("connect");
 	}
 }
 
@@ -346,6 +415,8 @@ void reconnect(Socket& socket, PollSet& set){
 
 
 
+static PollSet set;
+static Socket socket;
 
 
 
@@ -356,145 +427,382 @@ void reconnect(Socket& socket, PollSet& set){
 
 
 
+// STATES
+
+namespace game{
+static void enter(){
+}
+
+static void leave(){
+}
+
+static void update(void* data){
+}
+}
+
+namespace lobby{
+static void enter(){
+}
+
+static void leave(){
+}
+
+static void update(void* data){
+}
+}
+
+namespace main_menu{
+static ButtonMenu menu;
+
+static void enter(){
+	auto [r,g,b] = hsl_to_rgb({0.5f, 0.25f, 0.65f});
+	menu.background_hover = {255*r,255*g,255*b};
+	menu.background_passive = dark_color;
+	menu.text_hover = dark_color;
+	menu.text_passive = background_color;
+	menu.font = font;
+	add_button(menu, "aaaaa", [](){puts("1");});
+	add_button(menu, "bbbbb", [](){puts("2");});
+	add_button(menu, "ccccc", [](){puts("3");});
+	center_menu(menu, 0, SCREEN_WIDTH, 0, SCREEN_HEIGHT);
+}
+
+static void event(void* data){
+	sf::Event event = *reinterpret_cast<sf::Event*>(data);
+	if(event.type == sf::Event::KeyPressed){
+		switch(event.key.code){
+			case sf::Keyboard::Down:
+				move_down(menu);
+				break;
+			case sf::Keyboard::Up:
+				move_up(menu);
+				break;
+			case sf::Keyboard::Enter:
+				push_active_button(menu);
+				break;
+		}
+	}
+}
+
+static void update(void* data){
+	sf::RenderWindow& window = *reinterpret_cast<sf::RenderWindow*>(data);
+	draw_button_menu(window, menu);
+}
+
+static void leave(){
+}
+}
+
+namespace connect{
+static std::string ip = "127.0.0.1";
+static std::string port = "1111";
+
+sf::Text ip_text, port_text, ip_entered_text, port_entered_text;
+sf::Text* selected_text_field;
+sf::RectangleShape ip_background, port_background;
+sf::Text connecting_text;
+
+sf::String entered_text;
+
+static sf::Color selected_color{
+	static_cast<uint8_t>(0.75*244),
+	static_cast<uint8_t>(0.75*240),
+	static_cast<uint8_t>(0.75*219)
+};
+
+enum State{IP,PORT,CONNECTING};
+State state;
+
+static std::chrono::high_resolution_clock::time_point start, end;
+
+static void enter(){
+	constexpr int font_size = 25;
+	ip_text.setFont(font);
+	ip_text.setString("ip:");
+	ip_text.setCharacterSize(font_size);
+	ip_text.setFillColor(dark_color);
+	port_text.setFont(font);
+	port_text.setString("port:");
+	port_text.setCharacterSize(font_size);
+	port_text.setFillColor(dark_color);
+	ip_entered_text.setFont(font);
+	ip_entered_text.setString(ip);
+	ip_entered_text.setCharacterSize(0.75f*font_size);
+	ip_entered_text.setFillColor(background_color);
+	port_entered_text.setFont(font);
+	port_entered_text.setString(port);
+	port_entered_text.setCharacterSize(0.75f*font_size);
+	port_entered_text.setFillColor(background_color);
+	connecting_text.setFont(font);
+	connecting_text.setString("Connecting    (1/5)");
+	connecting_text.setCharacterSize(font_size);
+	connecting_text.setFillColor(dark_color);
+
+	auto ip_text_bounds = ip_text.getLocalBounds();
+	ip_text.setOrigin(ip_text_bounds.left + ip_text_bounds.width, ip_text_bounds.top + ip_text_bounds.height/2);
+	auto port_text_bounds = port_text.getLocalBounds();
+	port_text.setOrigin(port_text_bounds.left + port_text_bounds.width, port_text_bounds.top + port_text_bounds.height/2);
+
+	auto connecting_text_bounds = connecting_text.getLocalBounds();
+	connecting_text.setOrigin(connecting_text_bounds.left + connecting_text_bounds.width/2, connecting_text_bounds.top + connecting_text_bounds.height/2);
+	connecting_text.setPosition({0.5*SCREEN_WIDTH, 0.5*SCREEN_HEIGHT});
+
+
+	constexpr int spacing = 5;
+	ip_text.setPosition({0.5f*SCREEN_WIDTH - spacing, 0.25*SCREEN_HEIGHT});
+	port_text.setPosition({0.5f*SCREEN_WIDTH - spacing, 0.25*SCREEN_HEIGHT + 0.05f*SCREEN_HEIGHT});
+
+	ip_background.setFillColor(dark_color);
+	ip_background.setSize({100, font_size});
+	auto ip_background_bounds = ip_background.getLocalBounds();
+	ip_background.setOrigin(ip_background_bounds.left, ip_background_bounds.top + ip_background_bounds.height/2);
+	ip_background.setPosition({0.5f*SCREEN_WIDTH + spacing, 0.25*SCREEN_HEIGHT});
+
+
+	port_background.setFillColor(dark_color);
+	port_background.setSize({100, font_size});
+	auto port_background_bounds = port_background.getLocalBounds();
+	port_background.setOrigin(port_background_bounds.left, port_background_bounds.top + port_background_bounds.height/2);
+	port_background.setPosition({0.5f*SCREEN_WIDTH + spacing, 0.25*SCREEN_HEIGHT + 0.05f*SCREEN_HEIGHT});
+
+	auto ip_entered_text_bounds = ip_entered_text.getLocalBounds();
+	ip_entered_text.setOrigin(ip_entered_text_bounds.left, ip_entered_text_bounds.top + ip_entered_text_bounds.height/2);
+	ip_entered_text.setPosition({0.5f*SCREEN_WIDTH + 2*spacing, 0.25*SCREEN_HEIGHT});
+
+	auto port_entered_text_bounds = port_entered_text.getLocalBounds();
+	port_entered_text.setOrigin(port_entered_text_bounds.left, port_entered_text_bounds.top + port_entered_text_bounds.height/2);
+	port_entered_text.setPosition({0.5f*SCREEN_WIDTH + 2*spacing, 0.25*SCREEN_HEIGHT + 0.05f*SCREEN_HEIGHT});
+
+	selected_text_field = &ip_entered_text;
+	selected_text_field->setFillColor(selected_color);
+	state = IP;
+}
+
+static void event(void* data){
+	sf::Event event = *reinterpret_cast<sf::Event*>(data);
+	if(event.type == sf::Event::TextEntered && state != CONNECTING){
+		if(event.text.unicode == 8){
+			// backspace
+			//current_entered_text.pop_back();
+			if(entered_text.getSize() > 0){
+				entered_text.erase(entered_text.getSize() - 1);
+				selected_text_field->setString(entered_text);
+			}
+		}else if(event.text.unicode == 13){
+			selected_text_field->setFillColor(background_color);
+			entered_text.clear();
+			if(state == IP){
+				state = PORT;
+				selected_text_field = &port_entered_text;
+			}else if(state == PORT){
+				state = CONNECTING;
+				start = std::chrono::high_resolution_clock::now();
+
+				// if we did not manage to connect and needs to try again
+				// the server thread will need to be joined
+				if(server_thread.joinable()){
+					server_thread.join();
+				}
+				server_thread = std::thread(connect_to_server, std::ref(socket), std::ref(set));
+			}
+			selected_text_field->setFillColor(selected_color);
+		}else if(event.text.unicode < 128){
+			selected_text_field->setFillColor(background_color);
+			entered_text.insert(entered_text.getSize(),event.text.unicode);
+			selected_text_field->setString(entered_text);
+		}
+	}
+}
+
+static void update(void* data){
+	sf::RenderWindow& window = *reinterpret_cast<sf::RenderWindow*>(data);
+
+	if(state == CONNECTING){
+		end = std::chrono::high_resolution_clock::now();
+
+		static int dots = 0;
+		static int max_dots = 3;
+		static std::string dots_string = "    ";
+		if(end - start >= std::chrono::seconds(1)){
+			dots_string = "";
+			for(int i = 0; i <= dots; i++){
+				dots_string += ".";
+			}
+			for(int i = 0; i <= max_dots-dots; i++){
+				dots_string += " ";
+			}
+			dots = (dots+1)%max_dots;
+			start = end;
+		}
+		connecting_text.setString("Connecting" + dots_string + " (1/5)");
+		window.draw(connecting_text);
+	}
+
+	window.draw(ip_text);
+	window.draw(port_text);
+	window.draw(ip_background);
+	window.draw(port_background);
+	window.draw(ip_entered_text);
+	window.draw(port_entered_text);
+}
+
+static void leave(){
+	//if(!connect_to_server){
+	//	server_thread.join();
+	//}
+}
+}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// main menu screen
 
 int main(){
-	PollSet set;
-	//std::thread input_thread;
-	Socket socket;
-	server_thread = std::thread(reconnect, std::ref(socket), std::ref(set));
+	state::add("connect", {
+			connect::enter, 
+			connect::event, 
+			connect::update, 
+			connect::leave
+			});
+
+	state::add("main menu", {
+			main_menu::enter, 
+			main_menu::event, 
+			main_menu::update, 
+			main_menu::leave
+			});
+	state::add("lobby", {
+			lobby::enter,
+			nullptr,
+			lobby::update,
+			lobby::leave
+			});
+	state::add("game", {
+			game::enter,
+			nullptr,
+			game::update,
+			game::leave
+			});
+
+	//server_thread = std::thread(reconnect, std::ref(socket), std::ref(set));
 
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
 	sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "0x", sf::Style::Close, settings);
 
-
 	const std::string font_path = "../fonts/Roboto-Regular.ttf";
-	sf::Font font;
 	if(!font.loadFromFile(font_path)){
 		printf("Unable to load font %s (file not found)!\n", font_path.c_str());
-		return 1;
+		exit(1);
 	}
 
-	text.setFont(font);
-	text.setCharacterSize(12);
-	text.setFillColor(sf::Color(244,240,219));
+	state::change("connect");
 
-	sessions_text.setFont(font);
-	sessions_text.setCharacterSize(30);
-	sessions_text.setFillColor(sf::Color::Black);
-	sessions_text.setPosition({50, 50});
 
-	stats_text.setFont(font);
-	stats_text.setCharacterSize(15);
-	stats_text.setFillColor(sf::Color::Black);
-	stats_text.setPosition({800-300, 50});
+	//text.setFont(font);
+	//text.setCharacterSize(12);
+	//text.setFillColor(sf::Color(244,240,219));
 
-	
+	//sessions_text.setFont(font);
+	//sessions_text.setCharacterSize(30);
+	//sessions_text.setFillColor(sf::Color::Black);
+	//sessions_text.setPosition({50, 50});
+
+	//stats_text.setFont(font);
+	//stats_text.setCharacterSize(15);
+	//stats_text.setFillColor(sf::Color::Black);
+	//stats_text.setPosition({800-300, 50});
+
 	while (window.isOpen()){
 		//std::lock_guard<std::mutex> lock(mutex);
 		sf::Event event;
 		while(window.pollEvent(event)){
 			if(event.type == sf::Event::Closed)
 				window.close();
-			if(event.type == sf::Event::KeyPressed){
-				switch(event.key.code){
-					case sf::Keyboard::Q:
-						window.close();
-						break;
-					case sf::Keyboard::A:
-						toggle_hex_positions = !toggle_hex_positions;
-						break;
-					case sf::Keyboard::R:
-						send_command(socket, "ls");
-						break;
-					case sf::Keyboard::Num1: if(sessions.size() > 0){send_command(socket, "coj o " + sessions[0] + " 1");} break;
-					case sf::Keyboard::Num2: if(sessions.size() > 1){send_command(socket, "coj o " + sessions[1] + " 1");} break;
-					case sf::Keyboard::Num3: if(sessions.size() > 2){send_command(socket, "coj o " + sessions[2] + " 1");} break;
-					case sf::Keyboard::Num4: if(sessions.size() > 3){send_command(socket, "coj o " + sessions[3] + " 1");} break;
-					case sf::Keyboard::Num5: if(sessions.size() > 4){send_command(socket, "coj o " + sessions[4] + " 1");} break;
-				}
-			}
+			
+			state::event(&event);
+			//if(event.type == sf::Event::KeyPressed){
+			//	switch(event.key.code){
+			//		case sf::Keyboard::Down:
+			//			move_down(menu);
+			//			break;
+			//		case sf::Keyboard::Up:
+			//			move_up(menu);
+			//			break;
+			//		case sf::Keyboard::Enter:
+			//			push_active_button(menu);
+			//			break;
+			//		case sf::Keyboard::Q:
+			//			window.close();
+			//			break;
+			//		case sf::Keyboard::A:
+			//			toggle_hex_positions = !toggle_hex_positions;
+			//			break;
+			//		case sf::Keyboard::R:
+			//			send_command(socket, "ls");
+			//			break;
+			//		case sf::Keyboard::Num1: if(sessions.size() > 0){send_command(socket, "coj o " + sessions[0] + " 1");} break;
+			//		case sf::Keyboard::Num2: if(sessions.size() > 1){send_command(socket, "coj o " + sessions[1] + " 1");} break;
+			//		case sf::Keyboard::Num3: if(sessions.size() > 2){send_command(socket, "coj o " + sessions[2] + " 1");} break;
+			//		case sf::Keyboard::Num4: if(sessions.size() > 3){send_command(socket, "coj o " + sessions[3] + " 1");} break;
+			//		case sf::Keyboard::Num5: if(sessions.size() > 4){send_command(socket, "coj o " + sessions[4] + " 1");} break;
+			//	}
+			//}
 		}
 
-		window.clear(sf::Color(244,240,219));
+		window.clear(background_color);
 
-		if(!map.empty()){
-			// Using a capturing lambda here is slow (due to virtual function call?),
-			// especially since it's being called in a tight loop
-			for(auto& cell : map){
-				auto& [q,r,resources,player_id] = cell;
-				static sf::Color dark_color{47,47,47};
-				static sf::Color background_color{244,240,219};
+		//if(!map.empty()){
+		//	// Using a capturing lambda here is slow (due to virtual function call?),
+		//	// especially since it's being called in a tight loop
+		//	for(auto& cell : map){
+		//		auto& [q,r,resources,player_id] = cell;
 
-				sf::Color color = dark_color;
-				sf::Color	text = background_color;
-				if(player_id > 0){
-					float l = 0.2f + fmin((float)resources, 0.6f*300.0f)/300.0f;
-					if(l > 0.5f){
-						text = dark_color;
-					}
+		//		sf::Color color = dark_color;
+		//		sf::Color	text = background_color;
+		//		if(player_id > 0){
+		//			float l = 0.2f + fmin((float)resources, 0.6f*300.0f)/300.0f;
+		//			if(l > 0.5f){
+		//				text = dark_color;
+		//			}
 
-					auto [r,g,b] = hsl_to_rgb({player_id*360.0f/max_players, 0.5f, l});
-					color = sf::Color(255*r, 255*g, 255*b);
-				}
+		//			auto [r,g,b] = hsl_to_rgb({player_id*360.0f/max_players, 0.5f, l});
+		//			color = sf::Color(255*r, 255*g, 255*b);
+		//		}
 
-				draw_cell(window, q, r, resources, player_id, color, text);
-			}
-		}
+		//		draw_cell(window, q, r, resources, player_id, color, text);
+		//	}
+		//}
 
-		if(!player_scores.empty()){
-			sf::RectangleShape rect({10,10});
+		//if(!player_scores.empty()){
+		//	sf::RectangleShape rect({10,10});
 
-			stats_text.setPosition({800-100, 50});
-			stats_text.setString("Scores");
-			window.draw(stats_text);
+		//	stats_text.setPosition({800-100, 50});
+		//	stats_text.setString("Scores");
+		//	window.draw(stats_text);
 
-			auto pos = stats_text.getPosition();
-			stats_text.setPosition(pos + sf::Vector2f{15,0});
-			for(auto& [id, score] : player_scores){
-				auto pos = stats_text.getPosition();
-				stats_text.setPosition(pos + sf::Vector2f{0,20});
-				stats_text.setString(std::to_string(id) + ": " + std::to_string(score));
+		//	auto pos = stats_text.getPosition();
+		//	stats_text.setPosition(pos + sf::Vector2f{15,0});
+		//	for(auto& [id, score] : player_scores){
+		//		auto pos = stats_text.getPosition();
+		//		stats_text.setPosition(pos + sf::Vector2f{0,20});
+		//		stats_text.setString(std::to_string(id) + ": " + std::to_string(score));
 
-				auto [r,g,b] = hsl_to_rgb({id*360.0f/max_players, 0.5f, 0.5f});
-				auto color = sf::Color(255*r, 255*g, 255*b);
-				rect.setFillColor(color);
-				rect.setPosition(pos + sf::Vector2f{-15,20 + 10.0f/2}); 
-				window.draw(stats_text);
-				window.draw(rect);
-			}
-		}
+		//		auto [r,g,b] = hsl_to_rgb({id*360.0f/max_players, 0.5f, 0.5f});
+		//		auto color = sf::Color(255*r, 255*g, 255*b);
+		//		rect.setFillColor(color);
+		//		rect.setPosition(pos + sf::Vector2f{-15,20 + 10.0f/2}); 
+		//		window.draw(stats_text);
+		//		window.draw(rect);
+		//	}
+		//}
 
-
-		window.draw(sessions_text);
+		//draw_button_menu(window, menu);
+		//window.draw(sessions_text);
+		state::update(&window);
 
 		window.display();
 	}
-
-
-
 
 	window.close();
 

@@ -97,7 +97,7 @@ Socket client_bind(std::string ip, std::string port){
 	addrinfo* server_info;
 	if(int err = getaddrinfo(ip.c_str(), port.c_str(), &hints, &server_info); err != 0){
 		printf("Error: client_bind()::getaddrinfo: %s\n", gai_strerror(err));
-		return {};
+		return tcp_socket::INVALID;
 	}
 
 	int sock = -1;
@@ -127,11 +127,12 @@ Socket client_bind(std::string ip, std::string port){
 
 	if(p == nullptr){
 		printf("Error: failed to connect\n");
+		sock = tcp_socket::INVALID;
 	}else if(sock == -1){
 		printf("Error: failed to bind socket\n");
+		sock = tcp_socket::INVALID;
 	}
 
-	//return Socket(sock, server_ip);
 	return static_cast<Socket>(sock);
 }
 

@@ -4,9 +4,7 @@ GLOBAL:
 	- merge visualize_refactor, play
 
 SERVER:
-	- I dont think were disconnecting from a game/lobby when we're joining
-	- bad socket handle when client disconnects
-	an other one
+	- I dont think were disconnecting from a game/lobby when we're joining an other one
 	Error handling in binary encoding
 		- at least dont crash...
 	Handle game rules correctly:
