@@ -24,6 +24,7 @@ extern void send_all(Socket s, const std::string& data);
 extern size_t recv(Socket s, unsigned char* buffer, size_t buffer_size);
 
 extern void close(Socket s);
+extern void shutdown(Socket s);
 inline bool valid(Socket s){return s != INVALID;}
 
 }

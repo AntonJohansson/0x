@@ -101,7 +101,10 @@ size_t recv(Socket s, unsigned char* buffer, size_t buffer_size){
 
 void close(Socket s){
 	::close(s);
-	s = INVALID;
+}
+
+void shutdown(Socket s){
+	::shutdown(s, SHUT_RDWR);
 }
 
 
