@@ -88,6 +88,11 @@ static sf::Color background_color{244,240,219};
 static PollSet set;
 static Socket socket;
 
+enum ServerState{DISCONNECTED, CONNECTING, CONNECTED};
+enum GameState{NOT_IN_LOBBY, IN_LOBBY, SPECTATE_GAME, PLAY_GAME};
+static ServerState server_state = DISCONNECTED;
+static GameState game_state = NOT_IN_LOBBY;
+
 uint64_t lobby_id = 0;
 
 std::thread server_thread;
@@ -275,26 +280,7 @@ void receive_data(int s){
 		auto header = decode_packet_header(data, true);
 		if(!header.valid)
 			continue;
-		
-		//// DECODE PACKET ID
-		//decode::integer(data, packet_size);
 
-		//assert(packet_size <= data.size());
-
-		// DECODE PACKET TYPE
-		//uint8_t packet_type = 0;
-		//decode::integer(data, packet_type);
-
-		//// DECODE CRC
-		//uint32_t crc = 0;
-		//decode::integer(data, crc);
-
-		//printf("total data size received: %u\nheader:\n\tpacket_size: %u\n\tpacket_id: %u\n", total_data_size, packet_size, packet_type);
-
-		//uint32_t payload_crc = buffer_crc32(data.data(), packet_size);
-		//if(crc != payload_crc){
-		//	printf("CRC mismatch (%x != %0x)!\n", crc, payload_crc);
-		//}
 		uint32_t data_left_size = data.size() - header.payload_size;
 		switch(header.packet_type){
 			case PacketType::SESSION_LIST:{
@@ -347,71 +333,26 @@ void receive_data(int s){
 				}
 			case PacketType::CONNECTED_TO_LOBBY:{
 					decode::integer(data, lobby_id);
+					game_state = IN_LOBBY;
 					break;
 				}
 		}
-
-		//if(packet_type == 1){ // LIST
-		//	std::string session_name, text_string;
-		//	sessions.clear();
-		//	while(data.size() > data_left_size){
-		//		session_name = decode::string(data);
-		//		sessions.push_back(session_name);
-		//		text_string += std::to_string(sessions.size()) + "\t" + session_name + "\n";
-		//	}
-		//	sessions_text.setString(text_string);
-		//}else if(packet_type == 6){
-		//std::string message = decode::string(data);
-		//printf("Error: %s\n", message.c_str());
-		//}else if(packet_type == 2){ // OBSERVER MAP
-		//std::lock_guard<std::mutex> lock(mutex);
-
-		//printf("received observer map\n");
-		//tmp_map.clear();
-
-		//decode::multiple_integers(data, map_radius, player_count, max_players, current_turn);
-
-		//player_scores.clear();
-		//for(uint32_t i = 0; i < player_count; i++){
-		//	uint32_t player_id, resources;
-		//	decode::multiple_integers(data, player_id, resources);
-		//	player_scores.push_back({player_id, resources});
-		//}
-
-		//std::sort(player_scores.begin(), player_scores.end(), [](const auto& a, const auto& b){
-		//		return a.resources > b.resources;
-		//		});
-
-		//while(data.size() > data_left_size){
-		//		int32_t q;
-		//		int32_t r;
-		//		int32_t player_id;
-		//		uint32_t resources;
-
-		//		decode::multiple_integers(data, q, r, player_id, resources);
-		//		tmp_map.push_back(Cell{q,r,resources,player_id});
-		//	}
-
-		//	map = tmp_map;
-		//}else if(packet_type == 7){
-		//	decode::integer(data, lobby_id);
-		//}
 	}
 }
 
-enum MenuState{DISCONNECTED, CONNECTING, CONNECTED, SPECTATE_GAME, PLAY_GAME};
-static MenuState menu_state = DISCONNECTED;
 
-void connect_to_server(Socket& socket, PollSet& set){
-	for(int i = 0; i < 5; i++){
-		if(socket = client_bind("127.0.0.1", "1111"); socket != tcp_socket::INVALID){
+void connect_to_server(Socket& socket, PollSet& set, const char* ip, const char* port){
+	server_thread_running = true;
+	for(int i = 0; server_thread_running && i < 5; i++){
+		if(socket = client_bind(ip, port); socket != tcp_socket::INVALID){
 			tcp_socket::set_nonblocking(socket);
 
-			menu_state = CONNECTED;
+			server_state = CONNECTED;
 
 			set.add(socket, receive_data);
 			set.on_disconnect(socket, [&](int){
-					menu_state = DISCONNECTED;
+					server_state = DISCONNECTED;
+					game_state = NOT_IN_LOBBY;
 					server_thread_running = false;
 					tcp_socket::close(socket);
 					});
@@ -423,8 +364,8 @@ void connect_to_server(Socket& socket, PollSet& set){
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
-	if(menu_state == CONNECTED){
-		server_thread_running = true;
+	if(server_state == CONNECTED){
+		send_command(socket, "ls");
 		input_loop(set);
 	}
 }
@@ -477,27 +418,37 @@ int main(){
 
 		ImGui::SFML::Update(window, delta_clock.restart());
 
-		ImGui::Begin("Hexagon");
+		ImGui::Begin("Server");
 
-		char ip_input[16] = "127.0.0.1";
-		char port_input[16] = "1111";
-		if(menu_state == CONNECTED){
+		if(server_state == CONNECTED){
 			ImGui::TextColored({0,255,0,255}, "status: Connected");
-		}else if(menu_state == CONNECTING){
+		}else if(server_state == CONNECTING){
 			ImGui::TextColored({125,125,0,255}, "status: Connecting");
-		}else if(menu_state == DISCONNECTED){
+		}else if(server_state == DISCONNECTED){
 			ImGui::TextColored({255,0,0,255}, "status: Disconnected");
 		}
 
+		static char ip_input[16] = "127.0.0.1";
+		static char port_input[16] = "1111";
 		ImGui::InputText("Ip", ip_input, 16);
 		ImGui::InputText("Port", port_input, 16);
 		ImGui::Columns(2, NULL, false);
-		if(ImGui::Button("Connect")){
-			menu_state = CONNECTING;
+		if(server_state == DISCONNECTED && ImGui::Button("Connect")){
+			server_state = CONNECTING;
 			if(server_thread.joinable()){
 				server_thread.join();
 			}
-			server_thread = std::thread(connect_to_server, std::ref(socket), std::ref(set));
+			server_thread = std::thread(connect_to_server, std::ref(socket), std::ref(set), ip_input, port_input);
+		}else if(server_state != DISCONNECTED && ImGui::Button("Disconnect")){
+			// close server thread
+			// this code is repeated a bunch
+			server_state = DISCONNECTED;
+			game_state = NOT_IN_LOBBY;
+			server_thread_running = false;
+			tcp_socket::shutdown(socket);
+			if(server_thread.joinable()){
+				server_thread.join();
+			}
 		}
 		ImGui::NextColumn();
 		if(ImGui::Button("Quit")){
@@ -507,6 +458,70 @@ int main(){
 
 		ImGui::Separator();
 
+		if(server_state == CONNECTED){
+			if(ImGui::CollapsingHeader("Lobbies", ImGuiTreeNodeFlags_DefaultOpen)){
+				static int lobbies_selected = 0;
+				static const char* combo_items[2] = {"observer", "player"};
+				static int combo_selected = 0;
+
+				ImGui::Columns(3, NULL, false);
+				if(ImGui::Button("Refresh")){
+					send_command(socket, "ls");
+				}
+				ImGui::NextColumn();
+				static bool create_open = false;
+				if(ImGui::Button("Create")){
+					create_open = !create_open;
+				}
+				ImGui::NextColumn();
+				if(ImGui::Button("Join")){
+					game_state = NOT_IN_LOBBY;
+					send_command(socket, "coj " + std::string(combo_items[combo_selected]) + " " + sessions[lobbies_selected]);
+					map.clear();
+				}
+				ImGui::Columns(1);
+
+				ImGui::Combo("Mode", &combo_selected, combo_items, 2);
+
+				if(create_open){
+					static char input_name[16] = "";
+					static int input_max_players = 2;
+					static int input_map_radius = 3;
+					static bool input_restart_on_win = false;
+
+					ImGui::Begin("Create new lobby");
+					ImGui::InputText("Name", input_name, 16);
+					if(ImGui::InputInt("Max players", &input_max_players) && input_max_players < 1){
+						input_max_players = 1;
+					}
+					if(ImGui::InputInt("Map radius", &input_map_radius) && input_map_radius < 1){
+						input_map_radius = 1;
+					}
+					ImGui::Checkbox("Restart on win", &input_restart_on_win);
+					ImGui::Separator();
+					ImGui::Columns(2, NULL, false);
+					if(ImGui::Button("Cancel")){
+						create_open = false;
+					}
+					ImGui::NextColumn();
+					if(ImGui::Button("Create")){
+						send_command(socket, "coj o " + std::string(input_name) + " " + std::to_string(input_max_players) + " " + std::to_string(input_map_radius) + " " + ((input_restart_on_win) ? "true" : "false"));
+						create_open = false;
+					}
+					ImGui::Columns(1);
+					ImGui::End();
+				}
+				
+				if(!sessions.empty()){
+					ImGui::ListBox("Lobbies", &lobbies_selected, [](void* data, int idx, const char** out_text)->bool{
+								auto v = reinterpret_cast<std::vector<std::string>*>(data);
+								*out_text = (*v)[idx].c_str();
+								return true;
+							}, (void*)&sessions, sessions.size());
+				}
+			}
+		}
+
 		if(ImGui::CollapsingHeader("Console")){
 			ImGui::BeginChild("console");
 			ImGui::TextUnformatted("asdfasdfasfd");
@@ -515,31 +530,41 @@ int main(){
 			ImGui::InputText("Send Command", console_input, 255, ImGuiInputTextFlags_EnterReturnsTrue);
 		}
 
-		if(menu_state == CONNECTED){
-			if(ImGui::CollapsingHeader("Active Lobbies")){
-				if(ImGui::Button("Refresh")){
-					send_command(socket, "ls");
-				}
+		if(game_state == IN_LOBBY){
+			ImGui::Begin("Lobby");
+			ImGui::Columns(3, NULL, false);
 
-				if(!sessions.empty()){
-					ImGui::Columns(2, NULL, false);
-					ImGui::TextUnformatted("Lobby");
-					ImGui::NextColumn();
-					ImGui::Separator();
-					for(auto& str : sessions){
-						ImGui::NextColumn();
-						ImGui::TextUnformatted(str.c_str());
-						ImGui::NextColumn();
-						if(ImGui::Button("Join")){
-							send_command(socket, "coj o " + str + " 1");
-						}
-					}
-					ImGui::Columns(1);
-				}
+			ImGui::TextUnformatted("Color");
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("Id");
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("Score");
+			ImGui::NextColumn();
+			ImGui::Separator();
+
+			ImVec4 color;
+			for(auto& [id, score] : player_scores){
+				auto [r,g,b] = hsl_to_rgb({id*360.0f/max_players, 0.5f, 0.5f});
+				color = {r, g, b, 1.0f};
+				ImGui::ColorButton("", color);
+				//ImGuiColorEditFlags_NoSmallPreview|ImGuiColorEditFlags_NoTooltip|ImGuiColorEditFlags_NoDragDrop);
+				ImGui::NextColumn();
+				ImGui::Text("%i", id);
+				ImGui::NextColumn();
+				ImGui::Text("%i", score);
+				ImGui::NextColumn();
 			}
+			ImGui::Columns(1);
+			ImGui::Separator();
+
+			ImGui::Button("Pause");
+			ImGui::Button("Step");
+			ImGui::Button("Change game state");
+
+			ImGui::End();
 		}
 
-		ImGui::Separator();
+
 		ImGui::End();
 
 		window.clear(background_color);

@@ -11,10 +11,10 @@ for i in $(seq 1 $n); do
 done
 termite -e "python python_client/snake.py coj p hej $s"&
 
-#for i in $(seq 1 $n); do
-#	termite -e "python python_client/client.py coj p test $s 10 true"&
-#done
-#termite -e "python python_client/snake.py coj p test $s"&
+for i in $(seq 1 $n); do
+	termite -e "python python_client/client.py coj p test $s 10 true"&
+done
+termite -e "python python_client/snake.py coj p test $s"&
 
 #for i in $(seq 1 $n); do
 #	termite -e "python python_client/client.py coj p test $n"&
