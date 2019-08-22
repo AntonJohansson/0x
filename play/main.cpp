@@ -21,9 +21,6 @@
 #include <serialize/binary_encoding.hpp>
 #include <crc/crc32.hpp>
 
-
-
-
 constexpr float pi_over_six = M_PI/6.0f;
 constexpr float hex_size = 10.0f;
 // 0.866025403784438646763723170752936183471402626905190314
@@ -140,7 +137,7 @@ bool doing_transfer = false;
 bool m1_selected = false;
 int transfer_amount = 0;
 sf::Vector2i m0, m1;
-bool toggle_hex_positions = true;
+bool toggle_hex_positions = false;
 
 struct Cell;
 

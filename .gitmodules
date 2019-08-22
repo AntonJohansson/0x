@@ -4,3 +4,9 @@
 [submodule "visualize_refactor/third_party/imgui"]
 	path = visualize_refactor/third_party/imgui
 	url = https://github.com/ocornut/imgui
+[submodule "admin_client/third_party/imgui-sfml"]
+	path = admin_client/third_party/imgui-sfml
+	url = https://github.com/eliasdaler/imgui-sfml
+[submodule "admin_client/third_party/imgui"]
+	path = admin_client/third_party/imgui
+	url = https://github.com/ocornut/imgui

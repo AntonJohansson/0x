@@ -5,6 +5,7 @@
 namespace hex{
 
 struct CubeVec{int x = 0, y = 0, z = 0;};
+
 struct AxialVec{int q = 0, r = 0;};
 
 inline bool operator==(const CubeVec& a, const CubeVec& b){

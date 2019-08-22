@@ -21,6 +21,7 @@ SERVER:
 	game slows down after restart
 	send statistics when game ends
 
+	colors fuck up when adding two games are playing
 VISUALIZE:
 	admin mode
 		- pause game

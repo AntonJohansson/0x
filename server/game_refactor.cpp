@@ -130,8 +130,6 @@ static void send_observer_data(Game& game, const std::vector<ClientId>& observer
 }
 
 static void start_new_turn(Game& game){
-	//printf("\tstarting new turn\n");
-
 	if(game.current_turn > 0 && ++game.current_player != game.players.end()){
 		//printf("-- next player\n");
 	}else{

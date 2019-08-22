@@ -1,4 +1,4 @@
-set(PROJECT 0x)
+set(PROJECT server)
 set(SOURCES
 	game_refactor.cpp
 	server.cpp

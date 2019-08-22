@@ -1,4 +1,4 @@
-set(PROJECT visualize_refactor)
+set(PROJECT admin_client)
 set(SOURCES
 	main.cpp
 	third_party/imgui-sfml/imconfig-SFML.h
