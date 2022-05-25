@@ -32,10 +32,10 @@ constexpr float hex_size = 20.0f;
 // 0.866025403784438646763723170752936183471402626905190314
 constexpr float hex_width = 2*0.866025403784438646763723170752936183471402626905190314f*hex_size;
 
-constexpr int32_t SCREEN_WIDTH  = 800;
-constexpr int32_t SCREEN_HEIGHT = 600;
+constexpr int32_t SCREEN_WIDTH  = 1280;
+constexpr int32_t SCREEN_HEIGHT = 800;
 
-///////////// COLORS 
+///////////// COLORS
 struct RGB{float r, g, b;}; struct HSL{float h, s, l;};
 
 RGB hsl_to_rgb(HSL hsl){
@@ -69,9 +69,9 @@ static hex::AxialVec hex_round(float q, float r){
 	int ry = std::round(cube_y);
 	int rz = std::round(cube_z);
 
-	float x_diff = std::abs(rx - cube_x);
-	float y_diff = std::abs(ry - cube_y);
-	float z_diff = std::abs(rz - cube_z);
+	float x_diff = std::abs((float)rx - cube_x);
+	float y_diff = std::abs((float)ry - cube_y);
+	float z_diff = std::abs((float)rz - cube_z);
 
 	if(x_diff > y_diff && x_diff > z_diff){
 		rx = -ry - rz;
@@ -81,20 +81,21 @@ static hex::AxialVec hex_round(float q, float r){
 		rz = -rx - ry;
 	}
 
-	printf("%i,%i,%i\n", rx, ry, rz);
+	printf("%f, %f -> %i,%i,%i\n", q, r, rx, ry, rz);
 	return hex::cube_to_axial({rx, ry, rz});
 }
 
 static hex::AxialVec from_screen(int ix, int iy){
 	float x = ix, y = iy;
-	y = SCREEN_HEIGHT - y;
+	//y = SCREEN_HEIGHT - y;
 	y -= SCREEN_HEIGHT/2.0f;
 	x -= SCREEN_WIDTH/2.0f;
 	x /= 1.05f;
 	y /= 1.05f;
+	//printf("%f,%f\n", x,y);
 
-	float q = (sqrt(3)/3.0f*x - 	1.0f/3.0f*y)/static_cast<float>(hex_size);
-	float r = (										2.0f/3.0f*y)/static_cast<float>(hex_size);
+	float q = (x*sqrt(3.0f)/3.0f - y/3.0f)/static_cast<float>(hex_size);
+	float r = (y*2.0f/3.0f)/static_cast<float>(hex_size);
 	return hex_round(q, r);
 }
 
@@ -471,7 +472,7 @@ void connect_to_server(Socket& socket, PollSet& set, const char* ip, const char*
 			break;
 		}else{
 		}
-		
+
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
@@ -616,7 +617,7 @@ int main(){
 		ImGui::Columns(1);
 
 		ImGui::Separator();
-		 
+
 		// --------------- SFML
 
 		if(server_state == CONNECTED){
@@ -672,7 +673,7 @@ int main(){
 					ImGui::Columns(1);
 					ImGui::End();
 				}
-				
+
 				if(!sessions.empty()){
 					ImGui::ListBox("Lobbies", &lobbies_selected, [](void* data, int idx, const char** out_text)->bool{
 								auto v = reinterpret_cast<std::vector<std::string>*>(data);

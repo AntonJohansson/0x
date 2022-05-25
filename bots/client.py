@@ -5,7 +5,7 @@ import sys
 
 class random_bot(hexagon_bot):
     def handle_turn_data(self, map):
-        
+
         transfer_from = randint(0,len(map)-1)
         c0 = map[transfer_from][0]
 
@@ -43,9 +43,9 @@ class random_bot(hexagon_bot):
         self.submit_transaction(transfer_amount,  q0,r0, q1,r1)
 
 r = random_bot()
-r.connect('127.0.0.1', 1111)
+r.connect(sys.argv[1], 1111)
 
-s = ' '.join(sys.argv[1:])
+s = ' '.join(sys.argv[2:])
 r.command(s)
 
 while 1:
