@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdio.h>
 #include <functional>
 #include <unordered_map>
 #include <vector>
@@ -46,7 +47,7 @@ public:
 #else
 		//_changes.emplace_back();
 		//EV_SET(&_changes.back(), fd, EVFILT_READ, EV_ADD, 0, 0, 0);
-		
+
 		//struct kevent e;
 		EV_SET(&_changes[0], fd, EVFILT_READ, EV_ADD, 0, 0, 0);
 		//_changes.push_back(e);
@@ -94,7 +95,7 @@ public:
 		_n_changes++;
 		apply_changes();
 #endif
-	} 
+	}
 
 	void apply_changes(){
 #ifdef __APPLE__
@@ -160,7 +161,7 @@ public:
 private:
 	std::unordered_map<int, Func> _disconnect_map;
 	std::unordered_map<int, Func> _callback_map;
-#if __HAS_EPOLL__ 
+#if __HAS_EPOLL__
 	struct epoll_event _events[10];
 #else
 	struct kevent _changes[10];

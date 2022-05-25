@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <vector>
 #include <tuple>
+#include <cstddef>
+#include <string>
 #include <type_traits>
 
 #define CONCAT_IMPL(A,B,C) A ## B ## C
