@@ -8,7 +8,7 @@ set(SOURCES
 project(${PROJECT})
 add_executable(${PROJECT} ${SOURCES})
 
-find_library(library_location NAMES liblibrary.so HINTS ${CMAKE_CURRENT_BINARY_DIR}/library)
+find_library(library_location NAMES liblibrary.so HINTS ${CMAKE_CURRENT_BUILD_DIR}/library)
 add_library(library0x SHARED IMPORTED)
 set_target_properties(library0x PROPERTIES IMPORTED_LOCATION ${library_location})
 
